@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>請假申請</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .logo { font-size: 56px; text-align: center; margin-bottom: 5px; }
+    h1 { text-align: center; color: #333; font-size: 22px; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: #777; font-size: 13px; margin-bottom: 20px; }
+    label { display: block; color: #555; font-size: 14px; margin-bottom: 6px; margin-top: 12px; font-weight: 600; }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      background: #fafafa;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #fda085;
+      background: white;
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    .user-info {
+      background: #fff8ee;
+      border-left: 4px solid #fda085;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #555;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      margin-top: 20px;
+      background: linear-gradient(135deg, #f6d365, #fda085);
+    }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+      text-align: center;
+    }
+    .status.loading { display: block; background: #fff3cd; color: #856404; }
+    .status.success { display: block; background: #d4edda; color: #155724; }
+    .status.error   { display: block; background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">🏖️</div>
+    <h1>請假申請</h1>
+    <p class="subtitle">填寫完成後送出，主管會收到通知</p>
+
+    <div class="user-info" id="userInfo">載入使用者資訊中...</div>
+
+    <label>假別</label>
+    <select id="leaveType">
+      <option value="特休">特休</option>
+      <option value="事假">事假</option>
+      <option value="病假">病假</option>
+      <option value="喪假">喪假</option>
+      <option value="婚假">婚假</option>
+      <option value="公假">公假</option>
+      <option value="其他">其他</option>
+    </select>
+
+    <label>起始日期</label>
+    <input type="date" id="startDate">
+
+    <label>結束日期</label>
+    <input type="date" id="endDate">
+
+    <label>事由</label>
+    <textarea id="reason" placeholder="例如：回診、家庭事務..." maxlength="200"></textarea>
+
+    <button class="btn" id="submitBtn" onclick="submitLeave()">送出申請</button>
+    <div class="status" id="statusMsg"></div>
+  </div>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script>
+    const LIFF_ID = '2009523185-nTwexRny';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzXUJ7HrPEXhZ9aSms7aWr4c75i5d6pe4bgSPlFngKdhFlDoov4Qm9H1FEbOMQuU09FCQ/exec';
+
+    let userProfile = null;
+
+    // 預設起始/結束日期 = 今天
+    const todayStr = new Date().toISOString().slice(0, 10);
+    document.getElementById('startDate').value = todayStr;
+    document.getElementById('endDate').value   = todayStr;
+
+    async function init() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        userProfile = await liff.getProfile();
+        document.getElementById('userInfo').textContent = '👤 ' + userProfile.displayName;
+      } catch (err) {
+        document.getElementById('userInfo').textContent = '❌ 載入失敗：' + err.message;
+      }
+    }
+
+    async function submitLeave() {
+      const type      = document.getElementById('leaveType').value;
+      const startDate = document.getElementById('startDate').value;
+      const endDate   = document.getElementById('endDate').value;
+      const reason    = document.getElementById('reason').value.trim();
+
+      if (!startDate || !endDate) { showStatus('error', '請選擇起始與結束日期'); return; }
+      if (new Date(endDate) < new Date(startDate)) { showStatus('error', '結束日期不能早於起始日期'); return; }
+      if (!reason) { showStatus('error', '請填寫事由'); return; }
+      if (!userProfile) { showStatus('error', '使用者資訊未載入'); return; }
+
+      document.getElementById('submitBtn').disabled = true;
+      showStatus('loading', '送出中...');
+
+      try {
+        const payload = {
+          action: 'leave',
+          userId: userProfile.userId,
+          displayName: userProfile.displayName,
+          leaveType: type,
+          startDate: startDate,
+          endDate: endDate,
+          reason: reason
+        };
+        await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        showStatus('success', '✅ 申請已送出！請查看 LINE 確認訊息');
+        setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 2500);
+      } catch (err) {
+        showStatus('error', '❌ 送出失敗：' + err.message);
+        document.getElementById('submitBtn').disabled = false;
+      }
+    }
+
+    function showStatus(type, message) {
+      const el = document.getElementById('statusMsg');
+      el.className = 'status ' + type;
+      el.textContent = message;
+    }
+
+    init();
+  </script>
+</body>
+</html>

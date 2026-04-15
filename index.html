@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LINE 打卡系統</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    .logo { font-size: 60px; margin-bottom: 10px; }
+    h1 { color: #333; font-size: 24px; margin-bottom: 5px; }
+    .subtitle { color: #666; font-size: 14px; margin-bottom: 25px; }
+    .info-box {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #888; }
+    .info-value { color: #333; font-weight: 600; }
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 10px;
+    }
+    .btn-clockin  { background: linear-gradient(135deg, #06d6a0, #1b9aaa); }
+    .btn-clockout { background: linear-gradient(135deg, #ef476f, #f78c6b); }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+    .status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+    .status.loading { display: block; background: #fff3cd; color: #856404; }
+    .status.success { display: block; background: #d4edda; color: #155724; }
+    .status.error   { display: block; background: #f8d7da; color: #721c24; }
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #856404;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo" id="logo">&#9200;</div>
+    <h1 id="title">打卡系統</h1>
+    <p class="subtitle" id="subtitle">載入中...</p>
+
+    <div class="info-box" id="infoBox" style="display:none;">
+      <div class="info-row">
+        <span class="info-label">&#128100; 員工</span>
+        <span class="info-value" id="userName">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">&#128336; 時間</span>
+        <span class="info-value" id="currentTime">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">&#128205; 定位</span>
+        <span class="info-value" id="location">取得中...</span>
+      </div>
+    </div>
+
+    <button class="btn btn-clockin"  id="btnClockIn"  style="display:none;" onclick="submitCheckIn('上班')">
+      &#9728;&#65039; 上班打卡
+    </button>
+    <button class="btn btn-clockout" id="btnClockOut" style="display:none;" onclick="submitCheckIn('下班')">
+      &#127769; 下班打卡
+    </button>
+
+    <div class="status" id="statusMsg"></div>
+  </div>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script>
+    // ⚠️ 請填入你的資訊（外部主機版本，不使用 GAS scriptlet）
+    const LIFF_ID = '2009523185-nTwexRny';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzXUJ7HrPEXhZ9aSms7aWr4c75i5d6pe4bgSPlFngKdhFlDoov4Qm9H1FEbOMQuU09FCQ/exec';
+
+    // 從 URL 參數讀取打卡類型（?type=上班 或 ?type=下班）
+    const urlParams = new URLSearchParams(window.location.search);
+    const CHECK_TYPE = urlParams.get('type') || '上班';
+
+    let userProfile = null;
+    let userLat     = null;
+    let userLng     = null;
+
+    // ===== 初始化 =====
+    async function init() {
+      try {
+        document.getElementById('subtitle').textContent = 'LIFF 初始化中... (ID: ' + LIFF_ID + ')';
+
+        if (!LIFF_ID || LIFF_ID.indexOf('<') === 0) {
+          throw new Error('LIFF_ID 未正確注入，請重新部署 GAS');
+        }
+
+        // 加上 10 秒逾時，避免 liff.init() 無限等待
+        const initPromise = liff.init({ liffId: LIFF_ID });
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('liff.init() 逾時 10 秒，可能是 GAS iframe 問題')), 10000)
+        );
+        await Promise.race([initPromise, timeoutPromise]);
+        document.getElementById('subtitle').textContent = '檢查登入狀態...';
+
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+
+        document.getElementById('subtitle').textContent = '取得使用者資料...';
+        userProfile = await liff.getProfile();
+        document.getElementById('userName').textContent = userProfile.displayName;
+        document.getElementById('infoBox').style.display = 'block';
+
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        if (CHECK_TYPE === '下班') {
+          document.getElementById('logo').textContent  = '🌙';
+          document.getElementById('title').textContent = '下班打卡';
+          document.getElementById('btnClockOut').style.display = 'block';
+        } else {
+          document.getElementById('logo').textContent  = '☀️';
+          document.getElementById('title').textContent = '上班打卡';
+          document.getElementById('btnClockIn').style.display  = 'block';
+        }
+
+        document.getElementById('subtitle').textContent = '請確認資訊後按下打卡';
+        getLocation();
+
+      } catch (err) {
+        showStatus('error', '初始化失敗：' + err.message);
+      }
+    }
+
+    // ===== 取得 GPS 定位 =====
+    function getLocation() {
+      if (!navigator.geolocation) {
+        document.getElementById('location').textContent = '瀏覽器不支援定位';
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          userLat = position.coords.latitude;
+          userLng = position.coords.longitude;
+          document.getElementById('location').textContent =
+            userLat.toFixed(4) + ', ' + userLng.toFixed(4);
+        },
+        function(error) {
+          const msgs = { 1: '請允許定位權限', 2: '定位服務不可用', 3: '定位逾時' };
+          const errMsg = msgs[error.code] || '無法取得定位';
+          document.getElementById('location').textContent = errMsg;
+          showStatus('error', '⚠️ ' + errMsg + '，請開啟手機定位功能後重試');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    // ===== 即時時鐘 =====
+    function updateTime() {
+      const now = new Date();
+      document.getElementById('currentTime').textContent = now.toLocaleString('zh-TW', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+      });
+    }
+
+    // ===== 提交打卡 =====
+    async function submitCheckIn(type) {
+      if (!userLat || !userLng) {
+        showStatus('error', '❌ 尚未取得定位，請稍候或重新整理頁面');
+        return;
+      }
+
+      document.querySelectorAll('.btn').forEach(btn => btn.disabled = true);
+      showStatus('loading', '<div class="spinner"></div> 打卡處理中...');
+
+      try {
+        const payload = {
+          userId:      userProfile.userId,
+          displayName: userProfile.displayName,
+          lat:  userLat,
+          lng:  userLng,
+          type: type
+        };
+
+        // 用 text/plain 送出，避免 CORS preflight（GAS 仍可解析 JSON 字串）
+        await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+
+        showStatus('success', '✅ 打卡資料已送出！請查看 LINE 訊息確認結果。');
+
+        setTimeout(function() {
+          if (liff.isInClient()) liff.closeWindow();
+        }, 3000);
+
+      } catch (err) {
+        showStatus('error', '❌ 打卡失敗：' + err.message);
+        document.querySelectorAll('.btn').forEach(btn => btn.disabled = false);
+      }
+    }
+
+    // ===== 顯示狀態訊息 =====
+    function showStatus(type, message) {
+      const el = document.getElementById('statusMsg');
+      el.className = 'status ' + type;
+      el.innerHTML = message;
+    }
+
+    init();
+  </script>
+</body>
+</html>

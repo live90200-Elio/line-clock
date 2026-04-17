@@ -86,13 +86,9 @@
     <div class="user-info" id="userInfo">載入使用者資訊中...</div>
 
     <label>假別</label>
-    <select id="leaveType">
-      <option value="特休">特休</option>
-      <option value="事假">事假</option>
+    <select id="leaveType" onchange="toggleReason()">
       <option value="病假">病假</option>
-      <option value="喪假">喪假</option>
-      <option value="婚假">婚假</option>
-      <option value="公假">公假</option>
+      <option value="事假">事假</option>
       <option value="其他">其他</option>
     </select>
 
@@ -102,7 +98,7 @@
     <label>結束日期</label>
     <input type="date" id="endDate">
 
-    <label>事由</label>
+    <label id="reasonLabel">事由</label>
     <textarea id="reason" placeholder="例如：回診、家庭事務..." maxlength="200"></textarea>
 
     <button class="btn" id="submitBtn" onclick="submitLeave()">送出申請</button>
@@ -120,6 +116,20 @@
     const todayStr = new Date().toISOString().slice(0, 10);
     document.getElementById('startDate').value = todayStr;
     document.getElementById('endDate').value   = todayStr;
+
+    // 假別切換時，「其他」要特別標註需註明原由
+    function toggleReason() {
+      const type = document.getElementById('leaveType').value;
+      const label = document.getElementById('reasonLabel');
+      const textarea = document.getElementById('reason');
+      if (type === '其他') {
+        label.textContent = '事由（請註明原由）⚠️';
+        textarea.placeholder = '請清楚說明請假原因...';
+      } else {
+        label.textContent = '事由';
+        textarea.placeholder = '例如：回診、家庭事務...';
+      }
+    }
 
     async function init() {
       try {

@@ -1,0 +1,56 @@
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const LIFF_ID = "2009523185-49rQ33n5";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby99prBN40uYrIQhquDPMoTepPaJ5kNX-IHPSOACBM5Ebi0vlsZ4dxk3x44yUlfwFoa/exec";
+
+let customers = [];
+let state = "idle";
+
+// 初始化
+async function initLIFF() {
+  await liff.init({ liffId: LIFF_ID });
+
+  if (!liff.isLoggedIn()) {
+    liff.login();
+    return;
+  }
+
+  const profile = await liff.getProfile();
+  const userId = profile.userId;
+
+  loadData(userId);
+}
+
+// 讀資料（帶 userId）
+async function loadData(userId) {
+  state = "loading";
+  updateChrome();
+  showStatus("🔄", "驗證身份中…", "請稍候");
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + "?userId=" + encodeURIComponent(userId));
+    const data = await res.json();
+
+    // ❌ 未授權
+    if (data.error) {
+      state = "error";
+      updateChrome();
+      showStatus("🚫", "無權限", data.error);
+      return;
+    }
+
+    customers = data;
+    state = "ok";
+    updateChrome();
+    render();
+
+  } catch (err) {
+    state = "error";
+    updateChrome();
+    showStatus("⚠️", "載入失敗", err.message);
+  }
+}
+
+// 啟動
+initLIFF();
+</script>

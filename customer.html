@@ -1,56 +1,586 @@
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script>
-const LIFF_ID = "2009523185-49rQ33n5";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby99prBN40uYrIQhquDPMoTepPaJ5kNX-IHPSOACBM5Ebi0vlsZ4dxk3x44yUlfwFoa/exec";
-
-let customers = [];
-let state = "idle";
-
-// 初始化
-async function initLIFF() {
-  await liff.init({ liffId: LIFF_ID });
-
-  if (!liff.isLoggedIn()) {
-    liff.login();
-    return;
-  }
-
-  const profile = await liff.getProfile();
-  const userId = profile.userId;
-
-  loadData(userId);
-}
-
-// 讀資料（帶 userId）
-async function loadData(userId) {
-  state = "loading";
-  updateChrome();
-  showStatus("🔄", "驗證身份中…", "請稍候");
-
-  try {
-    const res = await fetch(APPS_SCRIPT_URL + "?userId=" + encodeURIComponent(userId));
-    const data = await res.json();
-
-    // ❌ 未授權
-    if (data.error) {
-      state = "error";
-      updateChrome();
-      showStatus("🚫", "無權限", data.error);
-      return;
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>客戶查詢</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root {
+      --bg: #f7f4ef;
+      --panel: #ffffff;
+      --text: #242424;
+      --muted: #707070;
+      --line: #e7ded2;
+      --main: #0f7b5f;
+      --main-dark: #075f49;
+      --danger-bg: #ffe8e6;
+      --danger: #b12b22;
+      --shadow: 0 8px 24px rgba(55, 43, 30, .08);
     }
 
-    customers = data;
-    state = "ok";
-    updateChrome();
-    render();
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+        "Microsoft JhengHei", sans-serif;
+      line-height: 1.45;
+    }
 
-  } catch (err) {
-    state = "error";
-    updateChrome();
-    showStatus("⚠️", "載入失敗", err.message);
-  }
-}
+    .app {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      padding: calc(14px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));
+    }
 
-// 啟動
-initLIFF();
-</script>
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 4px 2px 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .profile {
+      min-width: 72px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
+    .search-box {
+      position: sticky;
+      top: env(safe-area-inset-top);
+      z-index: 5;
+      padding: 12px;
+      background: rgba(255, 255, 255, .96);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr 42px;
+      gap: 8px;
+    }
+
+    input[type="search"] {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: #fbfaf8;
+      color: var(--text);
+      font-size: 18px;
+      outline: none;
+    }
+
+    input[type="search"]:focus {
+      border-color: var(--main);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(15, 123, 95, .12);
+    }
+
+    button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--main);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:active { background: var(--main-dark); }
+    button:disabled { opacity: .55; cursor: wait; }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .quick-chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: #fff;
+      color: #4b4035;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .quick-chip.active {
+      border-color: var(--main);
+      background: #e8f5f0;
+      color: var(--main-dark);
+      font-weight: 700;
+    }
+
+    .list { margin-top: 14px; }
+
+    .card {
+      margin-bottom: 10px;
+      padding: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(55, 43, 30, .05);
+    }
+
+    .card.has-alert { border-left: 5px solid var(--danger); }
+
+    .customer-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .name {
+      font-size: 21px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .phone {
+      color: var(--muted);
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .pet-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .pet {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #edf6f2;
+      color: var(--main-dark);
+      font-size: 14px;
+    }
+
+    .alert-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .alert {
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--danger-bg);
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .money-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .money {
+      padding: 10px;
+      border-radius: 8px;
+      background: #faf7f2;
+      border: 1px solid #eee4d8;
+    }
+
+    .money .label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .money .value {
+      margin-top: 3px;
+      font-size: 22px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .money .value.low { color: var(--danger); }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 12px;
+      margin-top: 12px;
+      color: #4f4f4f;
+      font-size: 13px;
+    }
+
+    .info-grid b {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .note {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #f6f2eb;
+      color: #4b4035;
+      font-size: 14px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    mark {
+      border-radius: 3px;
+      padding: 0 2px;
+      background: #ffe68a;
+      color: inherit;
+    }
+
+    .status {
+      margin-top: 18px;
+      padding: 38px 18px;
+      border-radius: 8px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .status-title {
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .status button {
+      margin-top: 16px;
+      padding: 0 18px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 520px) {
+      .app { padding-left: 10px; padding-right: 10px; }
+      .topbar { align-items: flex-start; }
+      h1 { font-size: 20px; }
+      .customer-head { align-items: flex-start; flex-direction: column; gap: 3px; }
+      .phone { white-space: normal; }
+      .money-row { grid-template-columns: 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>客戶查詢</h1>
+        <div class="subtitle">輸入電話、姓名、寵物名或品種快速查詢</div>
+      </div>
+      <div id="profile" class="profile"></div>
+    </header>
+
+    <section id="searchPanel" class="search-box hidden">
+      <div class="search-row">
+        <input id="q" type="search" inputmode="search" autocomplete="off" placeholder="搜尋 0912、王小明、Lucky">
+        <button id="refresh" class="icon-button" type="button" aria-label="重新整理" title="重新整理">↻</button>
+      </div>
+      <div class="meta">
+        <span>共 <b id="total">0</b> 筆，顯示 <b id="visible">0</b> 筆</span>
+        <span id="updatedAt"></span>
+      </div>
+      <div class="chips" aria-label="快速篩選">
+        <span class="quick-chip active" data-filter="all">全部</span>
+        <span class="quick-chip" data-filter="alert">有提醒</span>
+        <span class="quick-chip" data-filter="balance">有儲值</span>
+        <span class="quick-chip" data-filter="zero">餘額為 0</span>
+      </div>
+    </section>
+
+    <section id="results" class="list"></section>
+  </main>
+
+  <script>
+    const LIFF_ID = "2009523185-49rQ33n5";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby99prBN40uYrIQhquDPMoTepPaJ5kNX-IHPSOACBM5Ebi0vlsZ4dxk3x44yUlfwFoa/exec";
+
+    const state = {
+      profile: null,
+      accessToken: "",
+      customers: [],
+      filter: "all",
+      loading: false
+    };
+
+    const el = {
+      profile: document.getElementById("profile"),
+      searchPanel: document.getElementById("searchPanel"),
+      q: document.getElementById("q"),
+      refresh: document.getElementById("refresh"),
+      total: document.getElementById("total"),
+      visible: document.getElementById("visible"),
+      updatedAt: document.getElementById("updatedAt"),
+      results: document.getElementById("results"),
+      chips: Array.from(document.querySelectorAll(".quick-chip"))
+    };
+
+    init();
+
+    async function init() {
+      showStatus("正在開啟 LINE LIFF", "請稍候，正在確認登入身分。");
+
+      try {
+        await liff.init({ liffId: LIFF_ID });
+
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        state.profile = await liff.getProfile();
+        state.accessToken = liff.getAccessToken();
+        el.profile.textContent = state.profile.displayName || "";
+        await loadCustomers();
+        bindEvents();
+      } catch (err) {
+        showStatus("無法開啟 LIFF", toErrorMessage(err), true);
+      }
+    }
+
+    function bindEvents() {
+      el.q.addEventListener("input", render);
+      el.refresh.addEventListener("click", loadCustomers);
+      el.chips.forEach((chip) => {
+        chip.addEventListener("click", () => {
+          state.filter = chip.dataset.filter;
+          el.chips.forEach((item) => item.classList.toggle("active", item === chip));
+          render();
+        });
+      });
+    }
+
+    async function loadCustomers() {
+      if (!state.accessToken) {
+        showStatus("尚未登入", "請從 LINE 官方帳號選單重新開啟此頁。", true);
+        return;
+      }
+
+      state.loading = true;
+      el.refresh.disabled = true;
+      showStatus("讀取資料中", "正在從 Google Sheets 取得最新客戶資料。");
+
+      try {
+        const url = new URL(APPS_SCRIPT_URL);
+        url.searchParams.set("action", "customers");
+        url.searchParams.set("token", state.accessToken);
+
+        const res = await fetch(url.toString(), { redirect: "follow" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        const payload = await res.json();
+        if (!payload.ok) throw new Error(payload.message || "讀取失敗");
+
+        state.customers = Array.isArray(payload.customers) ? payload.customers : [];
+        el.searchPanel.classList.remove("hidden");
+        el.updatedAt.textContent = formatUpdated(payload.updatedAt);
+        render();
+      } catch (err) {
+        showStatus("讀取失敗", toErrorMessage(err), true);
+      } finally {
+        state.loading = false;
+        el.refresh.disabled = false;
+      }
+    }
+
+    function render() {
+      const term = el.q.value.trim();
+      const normalizedTerm = normalize(term);
+      const rows = state.customers
+        .filter((customer) => quickFilter(customer, state.filter))
+        .filter((customer) => matches(customer, normalizedTerm));
+
+      el.total.textContent = String(state.customers.length);
+      el.visible.textContent = String(rows.length);
+
+      if (rows.length === 0) {
+        showStatus("查無資料", "請換電話、姓名、寵物名或品種再查一次。");
+        return;
+      }
+
+      el.results.innerHTML = rows.map((customer) => renderCard(customer, term)).join("");
+    }
+
+    function renderCard(customer, term) {
+      const alerts = Array.isArray(customer.alerts) ? customer.alerts : [];
+      const pets = Array.isArray(customer.pets) ? customer.pets : [];
+      const balance = Number(customer.balance || 0);
+      const amount = Number(customer.currentAmount || 0);
+      const lowBalance = balance <= 0;
+
+      return `
+        <article class="card ${alerts.length ? "has-alert" : ""}">
+          <div class="customer-head">
+            <div class="name">${highlight(customer.name || "未填姓名", term)}</div>
+            <a class="phone" href="tel:${escapeAttr(customer.phone || "")}">${highlight(customer.phone || "", term)}</a>
+          </div>
+
+          ${pets.length ? `<div class="pet-list">${pets.map((pet) => `
+            <span class="pet">${highlight(pet.name || "未填寵物名", term)}${pet.breed ? ` / ${highlight(pet.breed, term)}` : ""}</span>
+          `).join("")}</div>` : ""}
+
+          ${alerts.length ? `<div class="alert-list">${alerts.map((item) => `
+            <div class="alert">${escapeHtml(item)}</div>
+          `).join("")}</div>` : ""}
+
+          <div class="money-row">
+            <div class="money">
+              <span class="label">儲值金餘額</span>
+              <div class="value ${lowBalance ? "low" : ""}">${formatMoney(balance)}</div>
+            </div>
+            <div class="money">
+              <span class="label">本次金額</span>
+              <div class="value">${formatMoney(amount)}</div>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div><b>最近到店</b>${escapeHtml(customer.lastVisit || "未記錄")}</div>
+            <div><b>本次服務</b>${escapeHtml(customer.currentService || "未記錄")}</div>
+            <div><b>建立時間</b>${escapeHtml(customer.createdAt || "未記錄")}</div>
+            <div><b>來源</b>${escapeHtml(customer.source || "未記錄")}</div>
+          </div>
+
+          ${customer.notes ? `<div class="note">${escapeHtml(customer.notes)}</div>` : ""}
+        </article>
+      `;
+    }
+
+    function quickFilter(customer, filter) {
+      const balance = Number(customer.balance || 0);
+      if (filter === "alert") return Array.isArray(customer.alerts) && customer.alerts.length > 0;
+      if (filter === "balance") return balance > 0;
+      if (filter === "zero") return balance <= 0;
+      return true;
+    }
+
+    function matches(customer, term) {
+      if (!term) return true;
+      const source = [
+        customer.phone,
+        customer.name,
+        customer.notes,
+        customer.currentService,
+        customer.source,
+        ...(customer.alerts || []),
+        ...(customer.pets || []).flatMap((pet) => [pet.name, pet.breed])
+      ].join(" ");
+      return normalize(source).includes(term);
+    }
+
+    function highlight(text, term) {
+      const value = escapeHtml(text || "");
+      if (!term) return value;
+      const safeTerm = escapeRegExp(escapeHtml(term));
+      return value.replace(new RegExp(safeTerm, "gi"), (match) => `<mark>${match}</mark>`);
+    }
+
+    function showStatus(title, message, retry) {
+      el.results.innerHTML = `
+        <div class="status">
+          <div class="status-title">${escapeHtml(title)}</div>
+          <div>${escapeHtml(message)}</div>
+          ${retry ? `<button type="button" onclick="location.reload()">重新開啟</button>` : ""}
+        </div>
+      `;
+    }
+
+    function normalize(value) {
+      return String(value || "").toLowerCase().replace(/\s+/g, "");
+    }
+
+    function formatMoney(value) {
+      return "NT$ " + Number(value || 0).toLocaleString("zh-TW");
+    }
+
+    function formatUpdated(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleString("zh-TW", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function toErrorMessage(err) {
+      return err && err.message ? err.message : String(err || "發生未知錯誤");
+    }
+
+    function escapeRegExp(value) {
+      return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/"/g, "&quot;");
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+  </script>
+</body>
+</html>

@@ -1667,9 +1667,14 @@
       const pool = state.customers.filter(c => {
         const inPet = (c.pets || []).some(p => normalize(p.name).includes(norm));
         const phone = String(c.phone || "");
-        const phoneMatch = phone.replace(/\D/g, "").endsWith(norm.replace(/\D/g, ""));
+        // 修：原本用 norm.length>=3 判斷做不做電話比對；norm 裡無數字時
+        // norm.replace(/\D/g,'') 為空，endsWith('') 對所有電話都 true → pool
+        // 變全表，slice(0,6) 後正解被擠掉（例：搜「MINI」找不到 Mini cooper）。
+        // 改用「輸入裡的數字字數」當門檻。
+        const queryDigits = norm.replace(/\D/g, "");
+        const phoneMatch = queryDigits.length >= 3 && phone.replace(/\D/g, "").endsWith(queryDigits);
         const nameMatch = normalize(c.name || "").includes(norm);
-        return inPet || (norm.length >= 3 && phoneMatch) || nameMatch;
+        return inPet || phoneMatch || nameMatch;
       });
 
       // 排序：mode 對應的優先 → 一般

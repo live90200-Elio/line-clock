@@ -1123,6 +1123,11 @@
             <button type="button" class="pay-btn" data-pay="LINE Pay">LINE Pay</button>
           </div>
         </div>
+        <div class="field">
+          <label class="field-label" for="guestNote">📝 備註（選填）</label>
+          <textarea id="guestNote" class="note-input" rows="2"
+            placeholder="例：耳朵紅腫已提醒主人 / 下次建議剪短一點"></textarea>
+        </div>
         <button id="guestSubmit" type="button" class="submit-btn">✓ 送出</button>
         <div id="guestHint"></div>
       </div>
@@ -1177,6 +1182,11 @@
           <div id="monthlyAmountWrap" class="field hidden">
             <label class="field-label" for="monthlyAmount">💵 包月金額（45 天 5 次）</label>
             <input id="monthlyAmount" class="num-input" type="number" inputmode="numeric" value="1500">
+          </div>
+          <div class="field">
+            <label class="field-label" for="monthlyNote">📝 備註（選填）</label>
+            <textarea id="monthlyNote" class="note-input" rows="2"
+              placeholder="例：耳朵紅腫已提醒主人 / 下次建議剪短一點"></textarea>
           </div>
           <div id="monthlyPreview" class="preview" style="display:none"></div>
           <button id="monthlySubmit" type="button" class="submit-btn">✓ 送出</button>
@@ -1267,6 +1277,7 @@
       guestForm:    document.getElementById("guestForm"),
       guestPet:     document.getElementById("guestPet"),
       guestAmount:  document.getElementById("guestAmount"),
+      guestNote:    document.getElementById("guestNote"),
       guestSubmit:  document.getElementById("guestSubmit"),
       guestHint:    document.getElementById("guestHint"),
       payBtns:      Array.from(document.querySelectorAll(".pay-btn")),
@@ -1291,6 +1302,7 @@
       monthlySelected:    document.getElementById("monthlySelected"),
       monthlyAmountWrap:  document.getElementById("monthlyAmountWrap"),
       monthlyAmount:      document.getElementById("monthlyAmount"),
+      monthlyNote:        document.getElementById("monthlyNote"),
       monthlyPreview:     document.getElementById("monthlyPreview"),
       monthlySubmit:      document.getElementById("monthlySubmit"),
       monthlyHint:        document.getElementById("monthlyHint"),
@@ -1862,12 +1874,14 @@
       if (!Number.isFinite(amount) || amount <= 0) return showHint(el.guestHint, "金額需為正數", "error");
       if (!service) return showHint(el.guestHint, "請至少勾一個服務項目", "error");
 
+      const note = el.guestNote.value.trim();
       await postSubmit({
         type: "guest",
         petName: petName,
         amount: amount,
         payment: state.payment,
-        service: service
+        service: service,
+        note: note
       }, el.guestSubmit, el.guestHint, () => {
         return `<div>🐾 寵物：<b>${escapeHtml(petName)}</b></div>
                 <div>✂️ 服務：<b>${escapeHtml(service)}</b></div>
@@ -1911,12 +1925,14 @@
       if (!service) return showHint(el.monthlyHint, "請至少勾一個服務項目", "error");
 
       const petName = (c.pets[0] && c.pets[0].name) || "";
+      const note = el.monthlyNote.value.trim();
       const payload = {
         type: "monthly",
         phone: c.phone,
         petName: petName,
         mode: mode,
-        service: service
+        service: service,
+        note: note
       };
       if (mode === "new") {
         const amount = Number(el.monthlyAmount.value);
@@ -1992,6 +2008,7 @@
       // 散客
       el.guestPet.value = "";
       el.guestAmount.value = "";
+      el.guestNote.value = "";
       // 儲值
       el.creditSearch.value = "";
       el.creditResults.innerHTML = "";
@@ -2004,6 +2021,7 @@
       el.monthlySearch.value = "";
       el.monthlyResults.innerHTML = "";
       el.monthlyAmount.value = "1500";
+      el.monthlyNote.value = "";
       el.monthlyPreview.style.display = "none";
       el.monthlySearchWrap.classList.remove("hidden");
       el.monthlySelectedWrap.classList.add("hidden");

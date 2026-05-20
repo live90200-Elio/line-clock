@@ -753,6 +753,26 @@
       box-shadow: 0 0 0 3px rgba(108,186,139,.18);
     }
     .num-input { font-variant-numeric: tabular-nums; }
+    .note-input {
+      width: 100%;
+      min-height: 72px;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      background: var(--bg2);
+      color: var(--text);
+      font-size: 16px;
+      font-family: var(--font);
+      font-weight: 500;
+      outline: none;
+      resize: vertical;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .note-input:focus {
+      border-color: var(--primary);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(108,186,139,.18);
+    }
 
     /* Payment selector (現金/匯款/LINE Pay) */
     .pay-row {
@@ -1125,6 +1145,11 @@
             <label class="field-label" for="creditAmount">💵 本次消費金額</label>
             <input id="creditAmount" class="num-input" type="number" inputmode="numeric" placeholder="例：600">
           </div>
+          <div class="field">
+            <label class="field-label" for="creditNote">📝 備註（選填）</label>
+            <textarea id="creditNote" class="note-input" rows="2"
+              placeholder="例：耳朵紅腫已提醒主人 / 下次建議剪短一點"></textarea>
+          </div>
           <div id="creditPreview" class="preview" style="display:none"></div>
           <button id="creditSubmit" type="button" class="submit-btn">✓ 送出</button>
         </div>
@@ -1253,6 +1278,7 @@
       creditSelectedWrap:document.getElementById("creditSelectedWrap"),
       creditSelected:    document.getElementById("creditSelected"),
       creditAmount:      document.getElementById("creditAmount"),
+      creditNote:        document.getElementById("creditNote"),
       creditPreview:     document.getElementById("creditPreview"),
       creditSubmit:      document.getElementById("creditSubmit"),
       creditHint:        document.getElementById("creditHint"),
@@ -1859,12 +1885,14 @@
       if (!service) return showHint(el.creditHint, "請至少勾一個服務項目", "error");
 
       const petName = (c.pets[0] && c.pets[0].name) || "";
+      const note = el.creditNote.value.trim();
       await postSubmit({
         type: "credit",
         phone: c.phone,
         petName: petName,
         amount: amount,
-        service: service
+        service: service,
+        note: note
       }, el.creditSubmit, el.creditHint, (resp) => {
         const s = resp.summary || {};
         return `<div>🐾 寵物：<b>${escapeHtml(petName)}</b></div>
@@ -1968,6 +1996,7 @@
       el.creditSearch.value = "";
       el.creditResults.innerHTML = "";
       el.creditAmount.value = "";
+      el.creditNote.value = "";
       el.creditPreview.style.display = "none";
       el.creditSearchWrap.classList.remove("hidden");
       el.creditSelectedWrap.classList.add("hidden");

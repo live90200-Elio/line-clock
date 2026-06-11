@@ -111,9 +111,13 @@
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzXUJ7HrPEXhZ9aSms7aWr4c75i5d6pe4bgSPlFngKdhFlDoov4Qm9H1FEbOMQuU09FCQ/exec';
 
     let userProfile = null;
+    let accessToken = null;
 
-    // 預設起始/結束日期 = 今天
-    const todayStr = new Date().toISOString().slice(0, 10);
+    // 預設起始/結束日期 = 今天（用本地日期；toISOString 是 UTC，台灣早上 8 點前會變昨天）
+    const _d = new Date();
+    const todayStr = _d.getFullYear() + '-' +
+      String(_d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(_d.getDate()).padStart(2, '0');
     document.getElementById('startDate').value = todayStr;
     document.getElementById('endDate').value   = todayStr;
 
@@ -136,6 +140,7 @@
         await liff.init({ liffId: LIFF_ID });
         if (!liff.isLoggedIn()) { liff.login(); return; }
         userProfile = await liff.getProfile();
+        accessToken = liff.getAccessToken();
         document.getElementById('userInfo').textContent = '👤 ' + userProfile.displayName;
       } catch (err) {
         document.getElementById('userInfo').textContent = '❌ 載入失敗：' + err.message;
@@ -161,15 +166,22 @@
           action: 'leave',
           userId: userProfile.userId,
           displayName: userProfile.displayName,
+          token: accessToken,   // LIFF access token：GAS 端可打 LINE verify API 驗證 userId，防偽造
           leaveType: type,
           startDate: startDate,
           endDate: endDate,
           reason: reason
         };
-        await fetch(GAS_URL, {
+        const res = await fetch(GAS_URL, {
           method: 'POST',
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          redirect: 'follow'
         });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        // GAS 若回 JSON 且明確標失敗才報錯；回非 JSON（舊版部署）視為已送出
+        let data = null;
+        try { data = await res.json(); } catch (_) {}
+        if (data && data.ok === false) throw new Error(data.message || '後端寫入失敗');
         showStatus('success', '✅ 申請已送出！請查看 LINE 確認訊息');
         setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 2500);
       } catch (err) {

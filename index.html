@@ -125,6 +125,7 @@
     const CHECK_TYPE = urlParams.get('type') || '上班';
 
     let userProfile = null;
+    let accessToken = null;
     let userLat     = null;
     let userLng     = null;
 
@@ -152,6 +153,7 @@
 
         document.getElementById('subtitle').textContent = '取得使用者資料...';
         userProfile = await liff.getProfile();
+        accessToken = liff.getAccessToken();
         document.getElementById('userName').textContent = userProfile.displayName;
         document.getElementById('infoBox').style.display = 'block';
 
@@ -172,7 +174,7 @@
         getLocation();
 
       } catch (err) {
-        showStatus('error', '初始化失敗：' + err.message);
+        showStatus('error', '初始化失敗：' + escapeHtml(err.message));
       }
     }
 
@@ -212,7 +214,7 @@
 
     // ===== 提交打卡 =====
     async function submitCheckIn(type) {
-      if (!userLat || !userLng) {
+      if (userLat === null || userLng === null) {
         showStatus('error', '❌ 尚未取得定位，請稍候或重新整理頁面');
         return;
       }
@@ -224,16 +226,23 @@
         const payload = {
           userId:      userProfile.userId,
           displayName: userProfile.displayName,
+          token: accessToken,   // LIFF access token：GAS 端可打 LINE verify API 驗證 userId，防偽造
           lat:  userLat,
           lng:  userLng,
           type: type
         };
 
         // 用 text/plain 送出，避免 CORS preflight（GAS 仍可解析 JSON 字串）
-        await fetch(GAS_URL, {
+        const res = await fetch(GAS_URL, {
           method: 'POST',
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          redirect: 'follow'
         });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        // GAS 若回 JSON 且明確標失敗才報錯；回非 JSON（舊版部署）視為已送出
+        let data = null;
+        try { data = await res.json(); } catch (_) {}
+        if (data && data.ok === false) throw new Error(data.message || '後端寫入失敗');
 
         showStatus('success', '✅ 打卡資料已送出！請查看 LINE 訊息確認結果。');
 
@@ -242,16 +251,21 @@
         }, 3000);
 
       } catch (err) {
-        showStatus('error', '❌ 打卡失敗：' + err.message);
+        showStatus('error', '❌ 打卡失敗：' + escapeHtml(err.message));
         document.querySelectorAll('.btn').forEach(btn => btn.disabled = false);
       }
     }
 
     // ===== 顯示狀態訊息 =====
+    // message 可含 HTML（spinner 用）；外部來的文字（如 err.message）先用 escapeHtml 處理
     function showStatus(type, message) {
       const el = document.getElementById('statusMsg');
       el.className = 'status ' + type;
       el.innerHTML = message;
+    }
+
+    function escapeHtml(v) {
+      return String(v || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
     init();

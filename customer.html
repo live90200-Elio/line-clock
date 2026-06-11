@@ -1212,6 +1212,8 @@
   <script>
     const LIFF_ID = "2009523185-49rQ33n5";
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby99prBN40uYrIQhquDPMoTepPaJ5kNX-IHPSOACBM5Ebi0vlsZ4dxk3x44yUlfwFoa/exec";
+    // 讀客戶資料改走 POST（token 不進 URL）。需 GAS doPost 支援 action="customers" 後才能開。
+    const CUSTOMERS_VIA_POST = false;
 
     // 美容師清單（公用平板用：自己選名字後寫進 Sheets「美容師」欄 / 結單備註）
     // 要改名字直接改這個陣列即可，不用動其他 code
@@ -1499,13 +1501,29 @@
       el.refresh.disabled = true;
       showStatus("🐾", "讀取資料中", "正在從 Google Sheets 取得最新客戶資料。");
       try {
-        const url = new URL(APPS_SCRIPT_URL);
-        url.searchParams.set("action", "customers");
-        url.searchParams.set("token", state.accessToken);
-        const res = await fetch(url.toString(), { redirect: "follow" });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const payload = await res.json();
-        if (!payload.ok) throw new Error(payload.message || "讀取失敗");
+        // CUSTOMERS_VIA_POST=true 時改用 POST 讀客戶資料（token 不進 URL、不留伺服器 log）。
+        // 前提：GAS doPost 要先加 action==="customers" 分支（回傳格式同 doGet），
+        // 並對未知 action 回 ok:false，不可預設當成結單寫入。後端部署好再把旗標改 true。
+        let payload;
+        if (CUSTOMERS_VIA_POST) {
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },  // 避 CORS preflight
+            body: JSON.stringify({ action: "customers", token: state.accessToken }),
+            redirect: "follow"
+          });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          payload = await res.json();
+          if (!payload.ok) throw new Error(payload.message || "讀取失敗");
+        } else {
+          const url = new URL(APPS_SCRIPT_URL);
+          url.searchParams.set("action", "customers");
+          url.searchParams.set("token", state.accessToken);
+          const res = await fetch(url.toString(), { redirect: "follow" });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          payload = await res.json();
+          if (!payload.ok) throw new Error(payload.message || "讀取失敗");
+        }
         state.customers = Array.isArray(payload.customers) ? payload.customers : [];
         el.searchPanel.classList.remove("hidden");
         const upd = formatUpdated(payload.updatedAt);
@@ -1733,7 +1751,7 @@
       }
 
       target.innerHTML = top.map(c => {
-        const petName = (c.pets[0] && c.pets[0].name) || "未填寵物名";
+        const petName = ((c.pets || [])[0] && c.pets[0].name) || "未填寵物名";
         const balance = Number(c.balance || 0);
         let tag = "";
         if (mode === "credit" && balance > 0) {
@@ -1741,8 +1759,9 @@
         } else if (mode === "monthly" && c.monthly && c.monthly.isActive) {
           tag = `<span class="sri-tag monthly">剩 ${c.monthly.remaining} 次</span>`;
         }
+        // 用 state.customers 的 index 當 key——電話可能重複或空白，find by phone 會選錯人
         return `
-          <div class="search-result-item" data-phone="${escapeAttr(c.phone)}">
+          <div class="search-result-item" data-idx="${state.customers.indexOf(c)}">
             <div class="sri-name">🐾 ${escapeHtml(petName)}${tag}</div>
             <div class="sri-meta">${escapeHtml(c.name || "—")}　${escapeHtml(c.phone || "")}</div>
           </div>
@@ -1751,8 +1770,7 @@
 
       target.querySelectorAll(".search-result-item").forEach(item => {
         item.addEventListener("click", () => {
-          const phone = item.dataset.phone;
-          const customer = state.customers.find(c => String(c.phone) === phone);
+          const customer = state.customers[Number(item.dataset.idx)];
           if (customer) selectCustomer(mode, customer);
         });
       });
@@ -1760,7 +1778,7 @@
 
     function selectCustomer(mode, customer) {
       state.selectedCustomer = customer;
-      const petName = (customer.pets[0] && customer.pets[0].name) || "（未填寵物名）";
+      const petName = ((customer.pets || [])[0] && customer.pets[0].name) || "（未填寵物名）";
       if (mode === "credit") {
         el.creditSearchWrap.classList.add("hidden");
         el.creditSelectedWrap.classList.remove("hidden");
@@ -1898,7 +1916,7 @@
       if (!Number.isFinite(amount) || amount <= 0) return showHint(el.creditHint, "金額需為正數", "error");
       if (!service) return showHint(el.creditHint, "請至少勾一個服務項目", "error");
 
-      const petName = (c.pets[0] && c.pets[0].name) || "";
+      const petName = ((c.pets || [])[0] && c.pets[0].name) || "";
       const note = el.creditNote.value.trim();
       await postSubmit({
         type: "credit",
@@ -1924,7 +1942,7 @@
       if (!c) return showHint(el.monthlyHint, "請先選客戶", "error");
       if (!service) return showHint(el.monthlyHint, "請至少勾一個服務項目", "error");
 
-      const petName = (c.pets[0] && c.pets[0].name) || "";
+      const petName = ((c.pets || [])[0] && c.pets[0].name) || "";
       const note = el.monthlyNote.value.trim();
       const payload = {
         type: "monthly",

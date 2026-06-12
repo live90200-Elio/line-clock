@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小事系統｜讓客人用 LINE 自己預約、自己儲值</title>
+<style>
+  :root{
+    --ink:#2d2a26;
+    --ink-soft:#6b645c;
+    --cream:#faf6f0;
+    --card:#ffffff;
+    --accent:#e8845e;
+    --accent-deep:#d96b42;
+    --green:#06c755;
+    --green-deep:#05a948;
+    --gold:#f2b134;
+    --line-bg:#8cabd9;
+    --radius:18px;
+    --shadow:0 8px 30px rgba(45,42,38,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
+    background:var(--cream);color:var(--ink);line-height:1.7;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1024px;margin:0 auto;padding:0 22px}
+  section{padding:72px 0}
+
+  /* ---------- 進場動畫 ---------- */
+  .fade{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+  .fade.in{opacity:1;transform:none}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    padding:88px 0 64px;text-align:center;position:relative;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(232,132,94,.12), transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(6,199,85,.10), transparent 45%),
+      var(--cream);
+  }
+  .hero .badge{
+    display:inline-block;background:#fff;border:1.5px solid var(--accent);
+    color:var(--accent-deep);font-weight:700;font-size:.85rem;
+    padding:6px 18px;border-radius:999px;margin-bottom:22px;letter-spacing:.05em;
+  }
+  .hero h1{
+    font-size:clamp(1.9rem,5.5vw,3.1rem);font-weight:900;line-height:1.35;letter-spacing:.02em;
+  }
+  .hero h1 em{font-style:normal;color:var(--accent-deep);
+    background:linear-gradient(transparent 65%, rgba(242,177,52,.45) 65%);}
+  .hero p.sub{
+    margin:20px auto 0;max-width:560px;color:var(--ink-soft);font-size:1.05rem;
+  }
+  .hero .cta-row{margin-top:34px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .btn{
+    display:inline-block;padding:15px 34px;border-radius:999px;font-weight:800;
+    font-size:1.02rem;text-decoration:none;transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-main{background:var(--green);color:#fff;box-shadow:0 6px 18px rgba(6,199,85,.35)}
+  .btn-main:hover{background:var(--green-deep);transform:translateY(-2px)}
+  .btn-ghost{background:#fff;color:var(--ink);border:1.5px solid #ddd3c8}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent-deep)}
+  .hero .trust{margin-top:26px;font-size:.88rem;color:var(--ink-soft)}
+  .hero .trust b{color:var(--ink)}
+
+  /* ---------- 區塊標題 ---------- */
+  .sec-head{text-align:center;margin-bottom:46px}
+  .sec-head .kicker{color:var(--accent-deep);font-weight:800;font-size:.9rem;letter-spacing:.18em}
+  .sec-head h2{font-size:clamp(1.5rem,4vw,2.1rem);font-weight:900;margin-top:8px}
+  .sec-head p{color:var(--ink-soft);margin-top:10px;max-width:600px;margin-left:auto;margin-right:auto}
+
+  /* ---------- 痛點 ---------- */
+  .pains{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+  .pain{
+    background:var(--card);border-radius:var(--radius);padding:26px 24px;box-shadow:var(--shadow);
+    border-top:4px solid var(--accent);
+  }
+  .pain .emoji{font-size:2rem}
+  .pain h3{font-size:1.08rem;margin:10px 0 6px;font-weight:800}
+  .pain p{font-size:.93rem;color:var(--ink-soft)}
+
+  /* ---------- Demo 區（手機模擬器） ---------- */
+  .demo-sec{background:linear-gradient(165deg,#33415c 0%, #25304a 100%);color:#fff}
+  .demo-sec .sec-head h2{color:#fff}
+  .demo-sec .sec-head p{color:#c4cbda}
+  .demo-grid{display:flex;gap:48px;align-items:center;justify-content:center;flex-wrap:wrap}
+
+  .phone{
+    width:300px;height:600px;border-radius:42px;background:#111;
+    padding:12px;box-shadow:0 24px 60px rgba(0,0,0,.45);flex:none;position:relative;
+  }
+  .phone::before{
+    content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);
+    width:110px;height:26px;background:#111;border-radius:0 0 16px 16px;z-index:5;
+  }
+  .screen{
+    width:100%;height:100%;border-radius:32px;overflow:hidden;position:relative;
+    background:var(--line-bg);display:flex;flex-direction:column;
+  }
+  .chat-head{
+    background:#273248;color:#fff;padding:30px 16px 10px;font-weight:700;font-size:.95rem;
+    display:flex;align-items:center;gap:8px;flex:none;
+  }
+  .chat-head .dot{width:9px;height:9px;border-radius:50%;background:var(--green)}
+  .chat-body{flex:1;padding:14px 12px;overflow:hidden;position:relative}
+
+  .bubble{
+    max-width:82%;padding:10px 14px;border-radius:18px;font-size:.86rem;line-height:1.55;
+    margin-bottom:10px;opacity:0;transform:translateY(14px) scale(.96);
+    transition:opacity .45s ease,transform .45s ease;color:var(--ink);
+    box-shadow:0 2px 6px rgba(0,0,0,.08);white-space:pre-line;
+  }
+  .bubble.show{opacity:1;transform:none}
+  .bubble.bot{background:#fff;border-top-left-radius:6px}
+  .bubble.user{background:#9ef0b1;margin-left:auto;border-top-right-radius:6px}
+  .bubble.card{
+    background:#fff;border:none;width:88%;max-width:88%;padding:0;overflow:hidden;border-radius:14px;
+  }
+  .bubble.card .card-top{background:var(--accent);color:#fff;font-weight:800;padding:9px 14px;font-size:.85rem}
+  .bubble.card .card-mid{padding:12px 14px;font-size:.84rem}
+  .bubble.card .card-btn{
+    border-top:1px solid #eee;text-align:center;color:var(--green-deep);font-weight:800;padding:9px;font-size:.86rem;
+  }
+  .bubble .tag{display:inline-block;background:var(--cream);border-radius:6px;padding:1px 8px;font-size:.78rem;color:var(--accent-deep);font-weight:700;margin-right:4px}
+
+  .richmenu{
+    flex:none;background:#fff;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #e5e5e5;
+  }
+  .richmenu div{
+    padding:16px 8px;text-align:center;font-weight:800;font-size:.92rem;color:var(--ink);
+  }
+  .richmenu div:first-child{border-right:1px solid #eee}
+  .richmenu div span{display:block;font-size:1.45rem;margin-bottom:2px}
+  .richmenu div.pulse{animation:menuPulse 1.2s ease infinite}
+  @keyframes menuPulse{0%,100%{background:#fff}50%{background:#fff3ea}}
+
+  .demo-side{max-width:380px}
+  .demo-side h3{font-size:1.4rem;font-weight:900;margin-bottom:8px}
+  .demo-side h3 .num{color:var(--gold)}
+  .demo-side p{color:#c4cbda;font-size:.96rem;margin-bottom:22px;min-height:78px}
+  .demo-tabs{display:flex;flex-direction:column;gap:10px}
+  .demo-tab{
+    text-align:left;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);
+    color:#fff;border-radius:14px;padding:14px 18px;cursor:pointer;font-size:.97rem;font-weight:700;
+    font-family:inherit;transition:all .2s ease;display:flex;align-items:center;gap:12px;
+  }
+  .demo-tab small{display:block;font-weight:400;color:#aab3c5;font-size:.82rem}
+  .demo-tab.active{background:rgba(242,177,52,.18);border-color:var(--gold)}
+  .demo-tab .ico{font-size:1.5rem;flex:none}
+  .progress{height:3px;background:rgba(255,255,255,.15);border-radius:3px;margin-top:22px;overflow:hidden}
+  .progress i{display:block;height:100%;width:0;background:var(--gold);transition:width .3s linear}
+
+  /* ---------- 功能模組 ---------- */
+  .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  .feat{
+    background:var(--card);border-radius:var(--radius);padding:28px 26px;box-shadow:var(--shadow);
+    position:relative;overflow:hidden;
+  }
+  .feat .fico{
+    width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-size:1.6rem;background:var(--cream);margin-bottom:14px;
+  }
+  .feat h3{font-size:1.12rem;font-weight:800;margin-bottom:6px}
+  .feat p{font-size:.92rem;color:var(--ink-soft)}
+  .feat .who{
+    margin-top:14px;font-size:.8rem;font-weight:700;color:var(--accent-deep);
+    background:#fdf0e9;display:inline-block;padding:3px 12px;border-radius:999px;
+  }
+
+  /* ---------- 比較表 ---------- */
+  .compare{overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow)}
+  table{width:100%;border-collapse:collapse;background:#fff;min-width:560px}
+  th,td{padding:16px 18px;text-align:center;font-size:.95rem;border-bottom:1px solid #f0eae2}
+  th{background:#33415c;color:#fff;font-size:.98rem}
+  th:first-child,td:first-child{text-align:left;font-weight:700}
+  td .yes{color:var(--green-deep);font-weight:900}
+  td .no{color:#c0392b;font-weight:700}
+  tr.hl td{background:#fdf8ee}
+  .note{font-size:.82rem;color:var(--ink-soft);margin-top:12px;text-align:center}
+
+  /* ---------- 流程 ---------- */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;counter-reset:step}
+  .step{
+    background:var(--card);border-radius:var(--radius);padding:26px 22px;box-shadow:var(--shadow);
+    position:relative;counter-increment:step;
+  }
+  .step::before{
+    content:counter(step);position:absolute;top:-14px;left:20px;width:34px;height:34px;
+    background:var(--accent);color:#fff;font-weight:900;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(232,132,94,.4);
+  }
+  .step h3{font-size:1.02rem;font-weight:800;margin:8px 0 4px}
+  .step p{font-size:.88rem;color:var(--ink-soft)}
+
+  /* ---------- 價格 ---------- */
+  .prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:22px;align-items:stretch}
+  .price{
+    background:var(--card);border-radius:22px;padding:34px 30px;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;position:relative;
+  }
+  .price.popular{border:2.5px solid var(--accent);transform:scale(1.02)}
+  .price .pop-tag{
+    position:absolute;top:-15px;left:50%;transform:translateX(-50%);
+    background:var(--accent);color:#fff;font-weight:800;font-size:.8rem;
+    padding:4px 18px;border-radius:999px;white-space:nowrap;
+  }
+  .price h3{font-size:1.15rem;font-weight:900}
+  .price .amount{font-size:2.1rem;font-weight:900;color:var(--accent-deep);margin:10px 0 2px}
+  .price .amount small{font-size:.95rem;color:var(--ink-soft);font-weight:400}
+  .price ul{list-style:none;margin:18px 0 26px;flex:1}
+  .price li{font-size:.92rem;padding:7px 0;border-bottom:1px dashed #eee5da}
+  .price li::before{content:"✓ ";color:var(--green-deep);font-weight:900}
+  .price li.dim{color:#b9b0a5}
+  .price li.dim::before{content:"— ";color:#d8cfc4}
+  .price .btn{text-align:center}
+
+  /* ---------- FAQ ---------- */
+  .faq details{
+    background:var(--card);border-radius:14px;margin-bottom:12px;box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .faq summary{
+    padding:18px 22px;font-weight:800;cursor:pointer;list-style:none;
+    display:flex;justify-content:space-between;align-items:center;font-size:.98rem;
+  }
+  .faq summary::after{content:"＋";color:var(--accent-deep);font-weight:900;font-size:1.2rem}
+  .faq details[open] summary::after{content:"－"}
+  .faq .a{padding:0 22px 20px;font-size:.93rem;color:var(--ink-soft)}
+
+  /* ---------- 結尾 CTA ---------- */
+  .final{
+    background:linear-gradient(150deg,var(--accent) 0%,var(--accent-deep) 100%);
+    color:#fff;text-align:center;border-radius:28px;padding:58px 28px;margin:0 22px;
+  }
+  .final h2{font-size:clamp(1.5rem,4vw,2rem);font-weight:900}
+  .final p{margin:14px auto 30px;max-width:520px;opacity:.95}
+  .final .btn-main{background:#fff;color:var(--accent-deep);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  footer{text-align:center;padding:38px 20px;font-size:.84rem;color:var(--ink-soft)}
+
+  @media (max-width:680px){
+    section{padding:54px 0}
+    .demo-grid{gap:30px}
+    .phone{width:272px;height:548px}
+    .demo-side{text-align:center}
+    .demo-side p{min-height:0}
+    .price.popular{transform:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ HERO ════════ -->
+<header class="hero">
+  <div class="wrap">
+    <span class="badge">🐾 給個人工作室・小店家的 LINE 數位店面</span>
+    <h1>讓客人在 LINE 上<br><em>自己預約、自己查儲值</em><br>你只要顧好手上的客人</h1>
+    <p class="sub">不用 App、不用月租平台。客人加你的 LINE 官方帳號，按兩下就能填資料、簽約、看餘額——所有資料都存在<strong>你自己的 Google 帳號</strong>裡。</p>
+    <div class="cta-row">
+      <a class="btn btn-main" href="#contact">📲 免費看 Demo 帳號</a>
+      <a class="btn btn-ghost" href="#demo">先看畫面展示 ↓</a>
+    </div>
+    <p class="trust">已在真實店面 <b>「洗毛這件小事」寵物美容</b> 全天候運轉中</p>
+  </div>
+</header>
+
+<!-- ════════ 痛點 ════════ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head fade">
+      <div class="kicker">你是不是也這樣</div>
+      <h2>一個人開店，雜事比客人還多</h2>
+    </div>
+    <div class="pains">
+      <div class="pain fade"><div class="emoji">🌙</div><h3>半夜還在回訊息</h3><p>「請問可以預約嗎？」「我還有多少儲值金？」——同樣的問題，每天回幾十次。</p></div>
+      <div class="pain fade"><div class="emoji">📒</div><h3>儲值帳本記在筆記本</h3><p>客人問餘額要翻半天，偶爾還對不起來。被質疑一次，信任就少一分。</p></div>
+      <div class="pain fade"><div class="emoji">😶</div><h3>客人爽約找不到人</h3><p>忘了提醒，客人忘了來。一個空檔就是好幾百塊蒸發。</p></div>
+      <div class="pain fade"><div class="emoji">💸</div><h3>月租系統養不起</h3><p>市面預約系統每月一兩千起跳，一年兩三萬。生意做不做得起來都得繳。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 互動 DEMO ════════ -->
+<section class="demo-sec" id="demo">
+  <div class="wrap">
+    <div class="sec-head fade">
+      <div class="kicker" style="color:var(--gold)">LIVE DEMO</div>
+      <h2>客人的手機上，長這個樣子</h2>
+      <p>下面的畫面會自動播放。也可以點右邊（手機版在下面）切換不同情境。</p>
+    </div>
+    <div class="demo-grid fade">
+      <div class="phone">
+        <div class="screen">
+          <div class="chat-head"><span class="dot"></span>🐾 你的店（LINE 官方帳號）</div>
+          <div class="chat-body" id="chatBody"></div>
+          <div class="richmenu">
+            <div id="rmLeft"><span>🌸</span>線上預約</div>
+            <div id="rmRight"><span>💰</span>儲值方案</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-side">
+        <h3><span class="num" id="scTitleNum">01</span>　<span id="scTitle">客人自己完成預約</span></h3>
+        <p id="scDesc">客人點圖文選單 → 填資料 → 手寫簽名 → 系統自動產生 PDF 契約存進你的雲端，同時通知你的 LINE。全程你不用碰手機。</p>
+        <div class="demo-tabs">
+          <button class="demo-tab active" data-sc="0"><span class="ico">🌸</span><span>線上預約＋電子簽約<small>客人填單、簽名，PDF 自動歸檔</small></span></button>
+          <button class="demo-tab" data-sc="1"><span class="ico">💰</span><span>儲值餘額自助查<small>客人自己看餘額和消費紀錄</small></span></button>
+          <button class="demo-tab" data-sc="2"><span class="ico">👑</span><span>老闆視角：自動報告<small>每天晚上 8 點，營收自己送上門</small></span></button>
+        </div>
+        <div class="progress"><i id="progBar"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 功能模組 ════════ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head fade">
+      <div class="kicker">系統內容</div>
+      <h2>一套裝好，前台後台都有了</h2>
+      <p>依你的店量身組裝，用不到的模組不用買。</p>
+    </div>
+    <div class="feats">
+      <div class="feat fade"><div class="fico">📝</div><h3>客人填單＋電子簽約</h3><p>客人在 LINE 裡填基本資料、手寫簽名，系統自動產生 PDF 契約存進你的 Google 雲端，並推播通知你。新客建檔零手工。</p><span class="who">客人用</span></div>
+      <div class="feat fade"><div class="fico">💰</div><h3>儲值會員系統</h3><p>客人隨時查餘額、最近消費紀錄；想加值按一下，你 LINE 馬上收到申請。帳本在 Google 試算表，清清楚楚。</p><span class="who">客人用</span></div>
+      <div class="feat fade"><div class="fico">🔔</div><h3>預約自動提醒</h3><p>你照常用 Google 日曆排班。每天下午 4 點，系統自動整理「明天有誰要來」傳給你，附上可直接轉發給客人的提醒訊息——爽約大幅減少。</p><span class="who">老闆用</span></div>
+      <div class="feat fade"><div class="fico">📊</div><h3>老闆儀表板＋每日營收報告</h3><p>手機輸入密碼就看到：本月營收、和去年同期比較、每位員工業績、儲值金池。每晚 8 點還自動寄當日結算到你的 LINE 和 Email。</p><span class="who">老闆用</span></div>
+      <div class="feat fade"><div class="fico">🔍</div><h3>員工查詢＋結單（加購）</h3><p>員工用自己的 LINE 查客戶資料、餘額、包月狀態，做完服務直接結單入帳。白名單控管，離職員工一鍵移除。</p><span class="who">員工用</span></div>
+      <div class="feat fade"><div class="fico">🩺</div><h3>系統健康自我監控</h3><p>系統每小時自己檢查自己，有異常主動通知。不是裝完就消失的那種外包。</p><span class="who">系統自己用</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 比較 ════════ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head fade">
+      <div class="kicker">為什麼選這套</div>
+      <h2>和月租平台的差別</h2>
+    </div>
+    <div class="compare fade">
+      <table>
+        <tr><th>　</th><th>一般月租預約平台</th><th>🐾 小事系統</th></tr>
+        <tr><td>費用模式</td><td>每月 $1,000～3,000<br>用一年繳一年</td><td><span class="yes">一次建置</span>＋低額維護<br>不用就不再花錢</td></tr>
+        <tr class="hl"><td>客戶資料放在哪</td><td><span class="no">平台的伺服器</span><br>解約資料帶不走</td><td><span class="yes">你自己的 Google 帳號</span><br>哪天不用了，資料還是你的</td></tr>
+        <tr><td>客人要裝 App？</td><td>部分要 / 要註冊會員</td><td><span class="yes">不用</span>，加 LINE 好友就好</td></tr>
+        <tr><td>功能</td><td>制式，全行業一個樣</td><td><span class="yes">照你的店客製</span>（包月制、寵物欄位…）</td></tr>
+        <tr><td>有問題找誰</td><td>客服單、等回覆</td><td><span class="yes">直接找建置者本人</span></td></tr>
+      </table>
+    </div>
+    <p class="note">※ 系統建立在 LINE 官方帳號與 Google 的免費額度上，單店日常使用綽綽有餘。</p>
+  </div>
+</section>
+
+<!-- ════════ 流程 ════════ -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head fade">
+      <div class="kicker">怎麼開始</div>
+      <h2>從談好到上線，四步驟</h2>
+    </div>
+    <div class="steps">
+      <div class="step fade"><h3>聊聊你的店 🗣️</h3><p>30 分鐘了解你的服務項目、儲值方式、最想解決的麻煩。</p></div>
+      <div class="step fade"><h3>建置安裝 🔧</h3><p>申請 LINE 官方帳號、建好系統。全程用<strong>你的</strong>帳號建，約 5～7 個工作天。</p></div>
+      <div class="step fade"><h3>實測驗收 ✅</h3><p>用真手機走完整流程：預約、簽約、儲值、報表，每一項當面點給你看。</p></div>
+      <div class="step fade"><h3>教學交付 🎓</h3><p>30 分鐘教會你日常操作，交付一頁式帳號資訊表。之後有問題隨時找我。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 價格 ════════ -->
+<section style="padding-top:0" id="price">
+  <div class="wrap">
+    <div class="sec-head fade">
+      <div class="kicker">投資金額</div>
+      <h2>一次建置，系統就是你的</h2>
+      <p>不綁約、不月租。以下為參考方案，實際依店況報價。</p>
+    </div>
+    <div class="prices">
+      <div class="price fade">
+        <h3>輕量版</h3>
+        <div class="amount">$XX,XXX <small>起／一次</small></div>
+        <ul>
+          <li>LINE 官方帳號申請＋圖文選單設計</li>
+          <li>客人填單＋電子簽約（PDF 自動歸檔）</li>
+          <li>儲值會員系統（查餘額／申請加值）</li>
+          <li>每日營收自動報告</li>
+          <li class="dim">預約自動提醒</li>
+          <li class="dim">老闆儀表板</li>
+        </ul>
+        <a class="btn btn-ghost" href="#contact">詢問報價</a>
+      </div>
+      <div class="price popular fade">
+        <span class="pop-tag">🔥 多數店家選這個</span>
+        <h3>完整版</h3>
+        <div class="amount">$XX,XXX <small>起／一次</small></div>
+        <ul>
+          <li>輕量版全部內容</li>
+          <li>預約自動提醒（接你的 Google 日曆）</li>
+          <li>老闆儀表板（營收／員工業績／儲值金池）</li>
+          <li>員工查詢＋結單系統</li>
+          <li>系統健康自動監控</li>
+          <li>交付後 30 天保固調整</li>
+        </ul>
+        <a class="btn btn-main" href="#contact">詢問報價</a>
+      </div>
+      <div class="price fade">
+        <h3>安心維護（選配）</h3>
+        <div class="amount">$X,XXX <small>起／月</small></div>
+        <ul>
+          <li>故障處理優先支援</li>
+          <li>LINE／Google 平台改版跟進</li>
+          <li>小幅調整（文案、方案內容修改）</li>
+          <li>每月系統健檢報告</li>
+          <li class="dim">不續訂系統照常運作，只是改按次計費</li>
+        </ul>
+        <a class="btn btn-ghost" href="#contact">詢問報價</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ FAQ ════════ -->
+<section style="padding-top:0">
+  <div class="wrap" style="max-width:760px">
+    <div class="sec-head fade">
+      <div class="kicker">常見問題</div>
+      <h2>你大概想問的</h2>
+    </div>
+    <div class="faq fade">
+      <details><summary>我完全不懂電腦，操作得來嗎？</summary><div class="a">可以。日常你只會碰到三件事：看 LINE 通知、在 Google 日曆排預約、想看數字時打開儀表板。交付時手把手教 30 分鐘，還會在你的試算表裡留一份圖文教學。</div></details>
+      <details><summary>客人的資料安全嗎？放在哪裡？</summary><div class="a">所有資料（客戶名單、交易紀錄、契約 PDF）都存在<strong>你自己的 Google 帳號</strong>裡，我建置完就不持有。這也代表：就算哪天不跟我合作了，東西全部還在你手上。</div></details>
+      <details><summary>之後 LINE 或 Google 改版壞掉怎麼辦？</summary><div class="a">交付後 30 天內非誤操作的故障免費修。之後可選每月維護（含平台改版跟進），或不訂維護、壞了按次計費——不強迫。</div></details>
+      <details><summary>跟夯客那種月租系統比，差在哪？</summary><div class="a">月租平台功能多、有客服團隊，適合多店連鎖；但資料在平台手上、月費年年繳。這套是「買斷＋自有資料」，適合一人到幾人的工作室——夠用、便宜、跑得掉。</div></details>
+      <details><summary>真的有店在用嗎？</summary><div class="a">有，新竹的寵物美容店「洗毛這件小事」整套跑在這個系統上：客人線上簽約、儲值自助查詢、每天自動營收報告。約 Demo 時可以直接看實際運作畫面。</div></details>
+      <details><summary>我的行業不是寵物美容，能用嗎？</summary><div class="a">只要是「預約制＋會員儲值」型的店都適用：美甲、美睫、美髮、按摩、皮膚管理、家教工作室……欄位和文案會照你的行業調整。</div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 結尾 CTA ════════ -->
+<section style="padding-top:0" id="contact">
+  <div class="final fade">
+    <h2>先別急著決定，<br>加 LINE 看一次真的 Demo</h2>
+    <p>給你一個 Demo 帳號，用你自己的手機體驗客人會看到的每一步。看完覺得不適合，也完全沒關係。</p>
+    <a class="btn btn-main" href="https://line.me/R/ti/p/@REPLACE_ME" target="_blank">📲 加 LINE 聊聊（免費）</a>
+    <p style="margin-top:18px;font-size:.85rem;opacity:.85">或來電：09XX-XXX-XXX</p>
+  </div>
+</section>
+
+<footer>
+  小事系統 · 給小店家的 LINE 數位店面<br>
+  建置於 LINE 官方帳號 + Google Apps Script · 資料主權 100% 屬於店家
+</footer>
+
+<script>
+/* ── 進場動畫 ── */
+const io = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+},{threshold:.12});
+document.querySelectorAll('.fade').forEach(el=>io.observe(el));
+
+/* ── 手機 Demo 劇本 ──
+   type: rm = 圖文選單按鈕閃爍, user/bot = 對話泡泡, card = 卡片 */
+const SCENARIOS = [
+  {
+    title:"客人自己完成預約", num:"01",
+    desc:"客人點圖文選單 → 填資料 → 手寫簽名 → 系統自動產生 PDF 契約存進你的雲端，同時通知你的 LINE。全程你不用碰手機。",
+    steps:[
+      {type:"rm", side:"left", wait:1400},
+      {type:"user", text:"🌸 我要預約", wait:1100},
+      {type:"bot", text:"歡迎！請填寫基本資料 👇\n（在 LINE 裡直接開表單，不用下載 App）", wait:1600},
+      {type:"card", top:"📝 預約登記表", mid:"姓名：陳小姐\n電話：0912-XXX-XXX\n毛孩：黑寶（柴犬）\n服務：洗澡＋剪毛", btn:"✍️ 手寫簽名 → 送出", wait:2300},
+      {type:"bot", text:"✅ 登記完成！\n契約 PDF 已寄到您的 LINE，期待黑寶光臨 🐶", wait:1800},
+      {type:"bot", text:"🔔【老闆的 LINE 同時收到】\n新客簽約：陳小姐／黑寶\n金額 $1,200，PDF 已自動歸檔 📂", wait:2600}
+    ]
+  },
+  {
+    title:"儲值餘額自助查", num:"02",
+    desc:"客人不再傳訊息問「我還剩多少」。點開選單就能看到餘額和最近消費；想加值，按一下你就收到通知。",
+    steps:[
+      {type:"rm", side:"right", wait:1400},
+      {type:"user", text:"💰 儲值方案", wait:1100},
+      {type:"card", top:"💳 我的儲值卡", mid:"目前餘額：NT$ 2,350\n最後消費：6/3 洗澡 −$650\n上次儲值：5/10 +$3,000", btn:"查看完整紀錄", wait:2400},
+      {type:"card", top:"🎁 儲值方案", mid:"儲 $3,000 → 送 $300\n儲 $5,000 → 送 $750\n儲 $10,000 → 送 $2,000", btn:"我要儲值 💰", wait:2200},
+      {type:"bot", text:"已通知店家！下次到店完成儲值即可 😊", wait:1500},
+      {type:"bot", text:"🔔【老闆的 LINE 同時收到】\n儲值申請：陳小姐\n方案：儲 $5,000 送 $750", wait:2600}
+    ]
+  },
+  {
+    title:"老闆視角：自動報告", num:"03",
+    desc:"你什麼都不用按。每天下午 4 點收到明日預約清單、晚上 8 點收到當日營收結算——數字自己送上門。",
+    steps:[
+      {type:"bot", text:"⏰ 16:00 自動推播\n📅 明天 6/13 (六) 預約 4 件\n\n10:00 黑寶（洗澡＋剪毛）\n11:30 咪咪（洗澡）\n14:00 豆豆（剪毛）\n16:00 妞妞（洗澡）", wait:2600},
+      {type:"bot", text:"💬 附客人提醒訊息（複製就能傳）：\n「陳小姐您好，提醒您明天 10:00 黑寶的美容預約，期待見到你們 🐾」", wait:2400},
+      {type:"bot", text:"⏰ 20:00 自動推播\n📊 今日結算 6/12\n營業額 $5,800／6 筆\n本月累計 $61,400\n📈 比上月同期 +12%", wait:2600},
+      {type:"card", top:"👑 老闆儀表板（隨時可看）", mid:"本月營收：$61,400\n店內儲值金池：$28,500\n員工業績：小美 $32,000｜阿哲 $29,400", btn:"輸入密碼即可查看 🔐", wait:3000}
+    ]
+  }
+];
+
+const chatBody = document.getElementById('chatBody');
+const progBar  = document.getElementById('progBar');
+const rmLeft   = document.getElementById('rmLeft');
+const rmRight  = document.getElementById('rmRight');
+let scIdx = 0, stepIdx = 0, timer = null;
+
+function setScenario(i, userClicked){
+  scIdx = i; stepIdx = 0;
+  clearTimeout(timer);
+  chatBody.innerHTML = '';
+  rmLeft.classList.remove('pulse'); rmRight.classList.remove('pulse');
+  document.querySelectorAll('.demo-tab').forEach((t,j)=>t.classList.toggle('active', j===i));
+  const sc = SCENARIOS[i];
+  document.getElementById('scTitle').textContent = sc.title;
+  document.getElementById('scTitleNum').textContent = sc.num;
+  document.getElementById('scDesc').textContent = sc.desc;
+  playStep();
+}
+
+function playStep(){
+  const sc = SCENARIOS[scIdx];
+  if(stepIdx >= sc.steps.length){
+    timer = setTimeout(()=> setScenario((scIdx+1)%SCENARIOS.length), 2200);
+    progBar.style.width = '100%';
+    return;
+  }
+  progBar.style.width = (stepIdx / sc.steps.length * 100) + '%';
+  const s = sc.steps[stepIdx];
+
+  if(s.type === 'rm'){
+    const el = s.side === 'left' ? rmLeft : rmRight;
+    el.classList.add('pulse');
+    timer = setTimeout(()=>{ el.classList.remove('pulse'); stepIdx++; playStep(); }, s.wait);
+    return;
+  }
+
+  let b;
+  if(s.type === 'card'){
+    b = document.createElement('div');
+    b.className = 'bubble card';
+    b.innerHTML = '<div class="card-top">'+s.top+'</div><div class="card-mid">'+s.mid.replace(/\n/g,'<br>')+'</div><div class="card-btn">'+s.btn+'</div>';
+  } else {
+    b = document.createElement('div');
+    b.className = 'bubble ' + s.type;
+    b.textContent = s.text;
+  }
+  chatBody.appendChild(b);
+  requestAnimationFrame(()=> requestAnimationFrame(()=> b.classList.add('show')));
+
+  /* 滿了就把最舊的移除（模擬捲動） */
+  while(chatBody.scrollHeight > chatBody.clientHeight && chatBody.children.length > 1){
+    chatBody.removeChild(chatBody.firstChild);
+  }
+  timer = setTimeout(()=>{ stepIdx++; playStep(); }, s.wait);
+}
+
+document.querySelectorAll('.demo-tab').forEach(t=>{
+  t.addEventListener('click', ()=> setScenario(parseInt(t.dataset.sc,10), true));
+});
+setScenario(0);
+</script>
+</body>
+</html>

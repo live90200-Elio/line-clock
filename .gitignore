@@ -1,0 +1,9 @@
+# 圖文選單建置暫存物 —— 已備份在 littlethingCustomer/員工端圖文選單/（私有 repo）
+# 不要進公開的 line-clock（避免原圖/產圖腳本/richmenu id 外洩到 public）
+employee-menu*.json
+menu-*.jpg
+employee-richmenu-*.png
+寵物*.png
+make_menu.py
+*_richmenu_id
+.*_richmenu_id

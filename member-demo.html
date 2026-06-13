@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>客人端體驗（示範）— 小事系統 Demo</title>
+<meta name="theme-color" content="#f2b134">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --cream:#fbf6ee; --ink:#33415c; --muted:#7a8aa3;
+    --gold:#f2b134; --gold-deep:#cf8f1e; --line:#06c755;
+    --card:#ffffff;
+  }
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+    background:
+      radial-gradient(900px 400px at 100% -5%, rgba(242,177,52,.12), transparent 60%),
+      var(--cream);
+    color:var(--ink); line-height:1.6;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:0 16px 30px}
+
+  .demo-banner{
+    max-width:520px;margin:0 auto;padding:9px 16px;
+    background:linear-gradient(135deg,rgba(242,177,52,.18),rgba(242,177,52,.06));
+    border-bottom:1px solid rgba(207,143,30,.25);
+    font-size:12.5px;color:var(--gold-deep);text-align:center;font-weight:600
+  }
+
+  .tabs{
+    position:sticky;top:0;z-index:5;display:flex;gap:6px;
+    padding:12px 0 10px;background:linear-gradient(var(--cream) 70%, rgba(251,246,238,0));
+  }
+  .tabs a{
+    flex:1;text-align:center;text-decoration:none;font-size:14px;font-weight:700;
+    padding:10px;border-radius:12px;color:var(--muted);
+    background:#fff;border:1px solid #efe4d2;box-shadow:0 2px 8px rgba(120,90,30,.06)
+  }
+  .tabs a.on{background:linear-gradient(135deg,var(--gold),var(--gold-deep));color:#3a2a06;border-color:transparent}
+
+  h2.sec{font-size:16px;margin:18px 2px 12px;display:flex;align-items:center;gap:8px}
+  h2.sec .pill{font-size:11px;font-weight:700;color:#fff;background:var(--gold-deep);border-radius:999px;padding:2px 9px}
+
+  .card{
+    background:var(--card);border-radius:18px;padding:18px;
+    box-shadow:0 8px 24px rgba(120,90,30,.10);border:1px solid #f1e6d4;margin-bottom:14px
+  }
+  .row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed #eee3d1;font-size:14.5px}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--muted)}
+  .row .v{font-weight:700;text-align:right}
+
+  .sig-box{margin-top:6px;border:1px solid #eee3d1;border-radius:12px;padding:12px;background:#fffdf8}
+  .sig-box .lbl{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .pdf-chip{
+    display:inline-flex;align-items:center;gap:8px;margin-top:12px;
+    background:#eafaef;border:1px solid #b9e8c8;color:#1f7a45;
+    border-radius:12px;padding:10px 14px;font-size:13.5px;font-weight:700
+  }
+  .pdf-chip .ic{width:26px;height:26px;border-radius:7px;background:#d8362d;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
+
+  /* 會員卡 */
+  .mcard{
+    border-radius:20px;padding:20px;color:#3a2a06;position:relative;overflow:hidden;
+    background:linear-gradient(135deg,#ffe6a8,#f2b134 55%,#cf8f1e);
+    box-shadow:0 12px 30px rgba(207,143,30,.35);margin-bottom:14px
+  }
+  .mcard::after{content:"🐾";position:absolute;right:-6px;bottom:-14px;font-size:96px;opacity:.18}
+  .mcard .brand{font-size:13px;font-weight:800;letter-spacing:1px;opacity:.85}
+  .mcard .bal-label{font-size:12px;margin-top:14px;opacity:.8}
+  .mcard .bal{font-size:38px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:.5px}
+  .mcard .meta{display:flex;justify-content:space-between;margin-top:12px;font-size:13px;font-weight:700}
+  .mcard .meta .lvl{background:rgba(255,255,255,.55);border-radius:999px;padding:2px 12px}
+
+  .txn{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #f3ead9;font-size:14px}
+  .txn:last-child{border-bottom:none}
+  .txn .d{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .txn .a.minus{color:#c0492f;font-weight:700}
+  .txn .a.plus{color:#1f7a45;font-weight:700}
+
+  .plans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px}
+  .plan{
+    border:1.5px solid #f0dcb3;background:#fffdf8;border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer
+  }
+  .plan:active{transform:translateY(1px)}
+  .plan .top{font-size:15px;font-weight:800}
+  .plan .gift{font-size:11.5px;color:var(--gold-deep);font-weight:700;margin-top:2px}
+
+  .cta{display:block;text-align:center;text-decoration:none;margin-top:18px;padding:15px;
+    background:linear-gradient(135deg,var(--gold),var(--gold-deep));color:#3a2a06;
+    font-weight:800;letter-spacing:1px;border-radius:14px;box-shadow:0 10px 24px rgba(207,143,30,.3)}
+  .cta:active{transform:translateY(1px)}
+
+  footer{padding:20px 6px 6px;font-size:11px;color:#b09a72;text-align:center;line-height:1.8}
+
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);
+    background:#33415c;color:#fff;padding:11px 18px;border-radius:999px;font-size:13.5px;
+    opacity:0;transition:.25s;pointer-events:none;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.25)
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="demo-banner">🧪 這是「客人會看到的畫面」示範，資料皆虛構 ·「毛孩之家（示範店）」</div>
+
+<div class="wrap">
+  <div class="tabs">
+    <a href="#contract" class="on" id="tabContract">📝 填單簽約</a>
+    <a href="#card" id="tabCard">💰 儲值會員</a>
+  </div>
+
+  <!-- ===== 填單 + 簽約 ===== -->
+  <section id="contract">
+    <h2 class="sec">📝 新客填單 + 電子簽約 <span class="pill">客人自己填</span></h2>
+    <div class="card">
+      <div class="row"><span class="k">主人姓名</span><span class="v">王小美</span></div>
+      <div class="row"><span class="k">聯絡電話</span><span class="v">0912-***-321</span></div>
+      <div class="row"><span class="k">寵物</span><span class="v">豆豆 · 貴賓 · 3 歲 · 母</span></div>
+      <div class="row"><span class="k">美容偏好</span><span class="v">指甲修短、不剪鬍鬚</span></div>
+      <div class="row"><span class="k">注意事項</span><span class="v">怕吹風機聲、會員制</span></div>
+
+      <div class="sig-box">
+        <div class="lbl">客人手寫簽名</div>
+        <svg viewBox="0 0 280 70" width="100%" height="58" aria-label="簽名">
+          <path d="M12,50 C28,8 40,8 44,46 C46,18 58,16 60,44 C70,20 78,30 86,40
+                   C96,52 104,18 120,40 C112,46 128,52 140,40 C150,30 150,52 166,42
+                   C182,32 178,18 196,44 C206,58 220,30 236,38 C248,44 258,30 268,34"
+                fill="none" stroke="#2b3a55" stroke-width="3.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <div class="pdf-chip"><span class="ic">PDF</span> 電子契約已自動產生，並寄到您的 LINE 📩</div>
+    </div>
+    <p style="font-size:13px;color:var(--muted);padding:0 4px">
+      ☝️ 客人在 LINE 裡填完、手寫簽名，系統<strong>自動產生 PDF 契約</strong>存進店家的 Google 雲端，同時推播通知老闆。新客建檔零手工。
+    </p>
+  </section>
+
+  <!-- ===== 儲值會員卡 ===== -->
+  <section id="card">
+    <h2 class="sec">💰 會員儲值卡 <span class="pill">隨時自己查</span></h2>
+
+    <div class="mcard">
+      <div class="brand">🐾 毛孩之家 · 儲值會員</div>
+      <div class="bal-label">目前餘額</div>
+      <div class="bal">NT$ 3,250</div>
+      <div class="meta">
+        <span>豆豆的主人 · 王小美</span>
+        <span class="lvl">⭐ 黃金會員</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:800;margin-bottom:4px;font-size:14.5px">最近異動</div>
+      <div class="txn"><span><strong>全身大美容</strong><div class="d">2026-06-02</div></span><span class="a minus">-1,800</span></div>
+      <div class="txn"><span><strong>儲值加值（送 $300）</strong><div class="d">2026-05-20</div></span><span class="a plus">+3,300</span></div>
+      <div class="txn"><span><strong>SPA 藥浴</strong><div class="d">2026-05-06</div></span><span class="a minus">-1,500</span></div>
+      <div class="txn"><span><strong>指甲修剪 + 清耳</strong><div class="d">2026-04-22</div></span><span class="a minus">-300</span></div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:800;margin-bottom:8px;font-size:14.5px">儲值方案（點點看）</div>
+      <div class="plans">
+        <div class="plan" data-p="儲 $3,000 送 $300"><div class="top">$3,000</div><div class="gift">送 $300</div></div>
+        <div class="plan" data-p="儲 $5,000 送 $750"><div class="top">$5,000</div><div class="gift">送 $750</div></div>
+        <div class="plan" data-p="儲 $10,000 送 $2,000"><div class="top">$10,000</div><div class="gift">送 $2,000</div></div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--muted);padding:0 4px">
+      ☝️ 客人按一下想儲的方案，<strong>老闆 LINE 立刻收到申請</strong>；帳本存在店家的 Google 試算表，清清楚楚。
+    </p>
+  </section>
+
+  <a class="cta" href="intro.html">想幫自己的店裝一套？看完整介紹 →</a>
+
+  <footer>🧪 示範用假資料 · 正式版客人加店家 LINE → 圖文選單一鍵開啟，所有資料存在店家自己的 Google 帳號</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// 分頁高亮（跟著卷動）
+const tabC = document.getElementById("tabContract");
+const tabM = document.getElementById("tabCard");
+const secContract = document.getElementById("contract");
+const secCard = document.getElementById("card");
+function onScroll(){
+  const y = window.scrollY + 120;
+  const inCard = y >= secCard.offsetTop;
+  tabM.classList.toggle("on", inCard);
+  tabC.classList.toggle("on", !inCard);
+}
+window.addEventListener("scroll", onScroll, {passive:true});
+
+// 儲值方案 toast
+const toast = document.getElementById("toast");
+let toastTimer = null;
+document.querySelectorAll(".plan").forEach(p=>{
+  p.addEventListener("click", ()=>{
+    toast.textContent = "示範：選「" + p.dataset.p + "」→ 正式版會立即通知老闆 🔔";
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>toast.classList.remove("show"), 2400);
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "洗毛這件小事 — 營業儀表板",
+  "short_name": "儀表板",
+  "description": "寵美管理 — 營業儀表板",
+  "start_url": "./boss.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "icons": [
+    {
+      "src": "boss-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

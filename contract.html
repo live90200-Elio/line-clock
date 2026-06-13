@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>合約簽署</title>
+<style>
+  :root { --brown:#8a5a2b; --brown-deep:#6e4620; --bg:#f7f3ec; --card:#fff; --line:#e5dccd; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family:"Microsoft JhengHei","Noto Sans CJK TC",sans-serif; background:var(--bg); color:#333; line-height:1.6; }
+  .wrap { max-width:560px; margin:0 auto; padding:18px 16px 60px; }
+  h1 { font-size:1.35rem; text-align:center; color:var(--brown-deep); margin:8px 0 2px; }
+  .sub { text-align:center; color:#998; font-size:.85rem; margin-bottom:18px; }
+  .card { background:var(--card); border-radius:16px; padding:18px 16px; margin-bottom:16px; box-shadow:0 2px 12px rgba(0,0,0,.05); }
+  .card h2 { font-size:1rem; color:var(--brown); margin:0 0 12px; border-bottom:2px solid var(--line); padding-bottom:6px; }
+  label { display:block; font-size:.88rem; color:#666; margin:10px 0 4px; }
+  input[type=text], input[type=tel], input[type=email] { width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:10px; font-size:1rem; }
+  .plans { display:flex; flex-direction:column; gap:10px; }
+  .plan { border:2px solid var(--line); border-radius:12px; padding:12px 14px; cursor:pointer; transition:.15s; }
+  .plan.on { border-color:var(--brown); background:#fdf8f0; }
+  .plan .nm { font-weight:700; color:var(--brown-deep); }
+  .plan .pr { font-size:1.25rem; font-weight:800; color:var(--brown); }
+  .plan .pr small { font-size:.8rem; color:#998; font-weight:400; }
+  .terms { max-height:300px; overflow-y:auto; border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:.82rem; background:#fcfaf6; }
+  .terms .h { font-weight:700; color:var(--brown); margin:10px 0 2px; }
+  .terms ol { margin:2px 0 2px 18px; padding:0; }
+  .agree { display:flex; align-items:flex-start; gap:8px; margin-top:14px; font-size:.9rem; }
+  .agree input { width:20px; height:20px; margin-top:2px; flex:none; }
+  canvas { width:100%; height:200px; border:2px dashed var(--brown); border-radius:12px; background:#fff; touch-action:none; }
+  .sig-bar { display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+  .clear-btn { background:none; border:1px solid var(--line); border-radius:8px; padding:6px 14px; color:#888; font-size:.85rem; }
+  .submit { width:100%; padding:15px; margin-top:8px; border:none; border-radius:12px; background:var(--brown); color:#fff; font-size:1.1rem; font-weight:700; }
+  .submit:disabled { background:#ccc; }
+  .msg { text-align:center; padding:14px; border-radius:10px; margin-top:12px; font-size:.92rem; display:none; }
+  .msg.err { background:#fdecec; color:#c0392b; display:block; }
+  .done { text-align:center; padding:40px 20px; }
+  .done .big { font-size:3rem; }
+  .done h2 { color:var(--brown-deep); border:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="form">
+    <h1>系統建置・服務合約</h1>
+    <div class="sub">請確認方案、填寫資料、簽名後送出<br>合約 PDF 會自動寄給您與建置方留存</div>
+
+    <div class="card">
+      <h2>① 選擇方案</h2>
+      <div class="plans" id="plans">
+        <div class="plan" data-plan="light"><div class="nm">輕量版系統建置</div><div class="pr">$8,800 <small>／一次</small></div></div>
+        <div class="plan" data-plan="full"><div class="nm">完整版系統建置</div><div class="pr">$15,000 <small>／一次</small></div></div>
+        <div class="plan" data-plan="maintain"><div class="nm">安心維護服務</div><div class="pr">$800 <small>／月</small></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>② 甲方（您）的資料</h2>
+      <label>店名 *</label><input type="text" id="partyName" placeholder="例：洗毛這件小事">
+      <label>負責人姓名</label><input type="text" id="partyOwner" placeholder="例：陳小姐">
+      <label>聯絡電話 *</label><input type="tel" id="partyPhone" placeholder="09xxxxxxxx">
+      <label>Email *（合約 PDF 寄這）</label><input type="email" id="partyEmail" placeholder="you@example.com">
+      <label>店地址</label><input type="text" id="partyAddr" placeholder="（選填，會印在合約上）">
+    </div>
+
+    <div class="card">
+      <h2>③ 合約條款</h2>
+      <div class="terms" id="terms"></div>
+      <label class="agree"><input type="checkbox" id="agree"><span>我已詳閱並同意上述合約條款，且確認以上資料正確。</span></label>
+    </div>
+
+    <div class="card">
+      <h2>④ 簽名</h2>
+      <canvas id="pad"></canvas>
+      <div class="sig-bar"><span style="font-size:.8rem;color:#998;">請用手指在框內簽名</span><button class="clear-btn" id="clear">清除重簽</button></div>
+    </div>
+
+    <button class="submit" id="submit">確認簽署並送出</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="result" style="display:none;">
+    <div class="done">
+      <div class="big">✅</div>
+      <h2>簽署完成！</h2>
+      <p>合約 PDF 已寄到您的 Email，請查收留存。<br>感謝您的信任 🙌</p>
+      <p><a id="pdfLink" href="#" target="_blank" style="color:var(--brown);">開啟合約 PDF</a></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ⚠️ 部署後填：合約簽署系統 GAS Web App 的 /exec 網址
+const API_URL = "https://script.google.com/macros/s/AKfycby_vYPF97uE9GBXYjC7ub-_T9khTv5GykGLiYrXjnDrqRbVdu1GRuKSOuTXMtQURSB5LA/exec";
+
+// 合約條款（顯示用；正式全文以 PDF 為準，內容與後端一致）
+const TERMS = {
+  build: (price, deposit) => `
+    <div class="h">第1條 服務範圍</div>一店一套客製安裝，建置於您自有的 LINE 與 Google 帳號；兩方案皆含交付後 30 天保固。
+    <div class="h">第2條 價金與付款</div><ol>
+      <li>總價 NT$ ${price} 元整。</li>
+      <li>訂金 <b>NT$ ${deposit}</b>：簽約後支付，收訖後開工。</li>
+      <li>尾款 NT$ ${price - deposit}：驗收交付時付清。</li>
+      <li>開工後因甲方因素終止者，訂金不退。</li></ol>
+    <div class="h">第3條 工期</div>收訂金且備齊資料起約 5～7 個工作天交付驗收。
+    <div class="h">第4條 資料歸屬與著作權</div>資料存於您自有 Google 帳號、所有權歸您；系統建置方法與原始碼著作權歸乙方，您取得使用授權，乙方得用於其他客戶。
+    <div class="h">第5條 驗收</div>交付時實機演示，功能正常即驗收通過。
+    <div class="h">第6條 保固與責任</div>交付後 30 天非誤操作故障免費修；自行更改試算表結構、誤操作、平台改版另行報價；賠償以已付價金為上限。<b>試算表分頁名稱與欄位順序請勿自行更動。</b>
+    <div class="h">第7條 其他</div>未盡事宜依中華民國法律及誠信原則處理。`,
+  maintain: (price) => `
+    <div class="h">第1條 服務內容</div>故障優先支援、平台改版跟進、小幅調整、每月健檢報告。
+    <div class="h">第2條 除外（另報價）</div>新功能開發、大改版、自行改壞試算表、誤刪復原、重新部署。
+    <div class="h">第3條 維護費</div>每月 NT$ ${price}，預繳（月／季 NT$ ${price*3}／年 NT$ ${price*12}）。
+    <div class="h">第4條 期間</div>一年一約，期滿前一個月未終止視為續約。
+    <div class="h">第5條 回應</div>通報後 2 個工作日內回應；非 24 小時客服。
+    <div class="h">第6條 終止</div>任一方提前 30 天通知；終止後系統照常運作，僅改按次計費；預繳未用按比例退。
+    <div class="h">第7條 責任</div>平台不可控因素不負責；賠償以當期維護費為上限。`,
+};
+const PLAN_META = {
+  light:    { kind:"build",    price:8800,  deposit:3000 },
+  full:     { kind:"build",    price:15000, deposit:3000 },
+  maintain: { kind:"maintain", price:800 },
+};
+
+let curPlan = null;
+const $ = (id) => document.getElementById(id);
+
+// 方案選擇
+function selectPlan(p) {
+  curPlan = p;
+  document.querySelectorAll(".plan").forEach(el => el.classList.toggle("on", el.dataset.plan === p));
+  const m = PLAN_META[p];
+  $("terms").innerHTML = m.kind === "build" ? TERMS.build(m.price, m.deposit) : TERMS.maintain(m.price);
+  $("agree").checked = false;
+}
+document.querySelectorAll(".plan").forEach(el => el.addEventListener("click", () => selectPlan(el.dataset.plan)));
+// 支援用 ?plan=full 預選
+const urlPlan = new URLSearchParams(location.search).get("plan");
+if (urlPlan && PLAN_META[urlPlan]) selectPlan(urlPlan);
+
+// 簽名板
+const canvas = $("pad"), ctx = canvas.getContext("2d");
+let drawing = false, hasSig = false;
+function resizeCanvas() {
+  const r = canvas.getBoundingClientRect();
+  const tmp = ctx.getImageData ? null : null;
+  canvas.width = r.width * 2; canvas.height = r.height * 2;
+  ctx.scale(2, 2); ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.strokeStyle = "#222";
+}
+resizeCanvas();
+function pos(e) {
+  const r = canvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - r.left, y: t.clientY - r.top };
+}
+function start(e) { drawing = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+function move(e) { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); hasSig = true; e.preventDefault(); }
+function end() { drawing = false; }
+canvas.addEventListener("mousedown", start); canvas.addEventListener("mousemove", move); window.addEventListener("mouseup", end);
+canvas.addEventListener("touchstart", start, {passive:false}); canvas.addEventListener("touchmove", move, {passive:false}); canvas.addEventListener("touchend", end);
+$("clear").addEventListener("click", () => { ctx.clearRect(0,0,canvas.width,canvas.height); hasSig = false; });
+
+// 送出
+$("submit").addEventListener("click", async () => {
+  const msg = $("msg"); msg.className = "msg"; msg.style.display = "none";
+  const fail = (t) => { msg.textContent = t; msg.className = "msg err"; };
+
+  if (!curPlan) return fail("請先選擇方案");
+  const partyName = $("partyName").value.trim();
+  const partyPhone = $("partyPhone").value.trim();
+  const partyEmail = $("partyEmail").value.trim();
+  if (!partyName) return fail("請填店名");
+  if (!/^09\d{8}$/.test(partyPhone.replace(/\D/g,""))) return fail("電話格式錯誤（09 開頭 10 碼）");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(partyEmail)) return fail("Email 格式錯誤");
+  if (!$("agree").checked) return fail("請勾選「已詳閱並同意」");
+  if (!hasSig) return fail("請簽名");
+
+  const btn = $("submit"); btn.disabled = true; btn.textContent = "送出中…";
+  const data = {
+    partyName, partyOwner: $("partyOwner").value.trim(), partyPhone, partyEmail,
+    partyAddr: $("partyAddr").value.trim(), plan: curPlan,
+    signaturePng: canvas.toDataURL("image/png"),
+    agreedAt: new Date().toISOString(), submittedAt: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+  };
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
+    const out = await res.json();
+    if (out.ok) {
+      $("form").style.display = "none";
+      $("pdfLink").href = out.pdfUrl;
+      $("result").style.display = "block";
+      window.scrollTo(0, 0);
+    } else {
+      fail("送出失敗：" + (out.message || out.error || "未知錯誤"));
+      btn.disabled = false; btn.textContent = "確認簽署並送出";
+    }
+  } catch (err) {
+    fail("連線失敗，請稍後再試");
+    btn.disabled = false; btn.textContent = "確認簽署並送出";
+  }
+});
+</script>
+</body>
+</html>

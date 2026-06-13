@@ -10,3 +10,4 @@ make_menu.py
 
 # 本機預覽用（preview server 設定），不上 public
 .claude/
+圖文Demo*.png

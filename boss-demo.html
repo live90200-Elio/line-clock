@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>營業儀表板（示範）— 小事系統 Demo</title>
+
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="儀表板Demo">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(232,208,122,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 30%, rgba(122,178,232,.08), transparent 55%),
+      linear-gradient(165deg, #0b1220 0%, #121b2e 55%, #0d1424 100%);
+    background-attachment: fixed;
+    color: #e8ecf5;
+    line-height: 1.55;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .app { max-width: 960px; margin: 0 auto; padding: 14px 16px 8px; }
+
+  /* ===== Demo 橫幅 ===== */
+  .demo-banner {
+    max-width: 960px; margin: 0 auto; padding: 9px 16px;
+    background: linear-gradient(135deg, rgba(240,219,142,.16), rgba(212,165,71,.10));
+    border-bottom: 1px solid rgba(232,208,122,.25);
+    font-size: 12.5px; color: #f3e2a3; text-align: center; letter-spacing: .3px;
+  }
+  .demo-banner b { color: #ffe9a8; }
+
+  /* ===== 頂欄 ===== */
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 2px 14px; }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand .logo {
+    width: 40px; height: 40px; flex: none; border-radius: 12px;
+    background: linear-gradient(135deg, #f0db8e, #d4a547);
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+    box-shadow: 0 4px 12px rgba(212,165,71,.35);
+  }
+  h1.title { font-size: 17px; color: #f3e2a3; letter-spacing: .5px; white-space: nowrap; }
+  .period-label { font-size: 12px; color: #8a9aad; margin-top: 1px; }
+  .header-actions { display: flex; gap: 8px; flex: none; }
+  .icon-btn {
+    background: rgba(36,48,72,.7); border: 1px solid #31415e; color: #e8ecf5;
+    width: 38px; height: 38px; font-size: 15px; border-radius: 11px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:active { background: #2c3a57; }
+  .icon-btn:disabled { opacity: .45; cursor: wait; }
+  .icon-btn .spin { display: inline-block; }
+  .icon-btn.loading .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== 期間切換 ===== */
+  .period-tabs {
+    display: flex; gap: 4px; margin-bottom: 18px;
+    background: rgba(17,25,42,.8); border: 1px solid #25324c;
+    border-radius: 13px; padding: 4px;
+  }
+  .period-tabs button {
+    flex: 1; padding: 9px 4px; font-size: 13.5px;
+    background: transparent; color: #8a9aad; border: none;
+    border-radius: 9px; cursor: pointer; white-space: nowrap;
+  }
+  .period-tabs button.active {
+    background: linear-gradient(135deg, #f0db8e, #d4a547);
+    color: #1a1408; font-weight: 700;
+    box-shadow: 0 3px 10px rgba(212,165,71,.3);
+  }
+
+  /* ===== KPI ===== */
+  .kpis {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 10px; margin-bottom: 22px;
+  }
+  @media (min-width: 640px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+  .kpi {
+    background: linear-gradient(170deg, rgba(33,44,68,.9), rgba(20,28,46,.95));
+    border-radius: 16px; padding: 14px 16px;
+    border: 1px solid #28344f;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  }
+  .kpi.hero { grid-column: span 2; border-color: rgba(232,208,122,.35); }
+  @media (min-width: 640px) { .kpi.hero { grid-column: span 1; } }
+  .kpi-label { font-size: 12px; color: #8a9aad; letter-spacing: 1px; }
+  .kpi-value { font-size: 27px; font-weight: 800; color: #f3e2a3; margin-top: 3px; font-variant-numeric: tabular-nums; letter-spacing: .3px; }
+  .kpi.hero .kpi-value { font-size: 32px; }
+  .kpi-value.small { font-size: 21px; color: #a8d8b9; }
+  .kpi-sub { font-size: 11px; color: #6a7a8d; margin-top: 2px; }
+  .kpi-growth {
+    display: inline-block; font-size: 12px; margin-top: 6px; padding: 2px 9px;
+    border-radius: 999px; font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+  .kpi-growth.up { color: #9fe3b4; background: rgba(82,180,120,.15); }
+  .kpi-growth.down { color: #ff9b9b; background: rgba(220,90,90,.15); }
+  .kpi-growth.flat { color: #8a9aad; background: rgba(120,140,170,.12); }
+
+  section { margin-bottom: 22px; }
+  h2 {
+    font-size: 14px; color: #cdd8e8; margin-bottom: 10px; padding-left: 10px;
+    border-left: 3px solid #e8d07a; letter-spacing: 1.5px;
+  }
+
+  .card {
+    background: linear-gradient(170deg, rgba(30,40,62,.9), rgba(19,27,44,.95));
+    border-radius: 16px; padding: 16px;
+    border: 1px solid #28344f;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  }
+
+  .bar-row {
+    display: grid; grid-template-columns: 86px 1fr 96px;
+    gap: 10px; align-items: center; margin-bottom: 12px;
+  }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-row .bar-label { font-size: 14px; color: #e8ecf5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .bar-track { background: rgba(45,59,82,.6); border-radius: 999px; height: 14px; overflow: hidden; }
+  .bar-row .bar-fill { background: linear-gradient(90deg, #f0db8e, #d4a547); height: 100%; border-radius: 999px; transition: width .5s ease; }
+  .bar-row .bar-value { font-size: 13px; color: #a8d8b9; text-align: right; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .bar-row .bar-value .count { display: block; font-size: 10.5px; color: #6a7a8d; }
+
+  .txn {
+    display: grid; grid-template-columns: 52px 1fr auto;
+    gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(45,59,82,.5);
+    font-size: 14px; align-items: center;
+  }
+  .txn:last-child { border-bottom: none; padding-bottom: 2px; }
+  .txn:first-child { padding-top: 2px; }
+  .txn .date { color: #8a9aad; font-variant-numeric: tabular-nums; font-size: 12px; }
+  .txn .main { min-width: 0; }
+  .txn .main strong { color: #e8ecf5; }
+  .txn .main .sub { color: #8a9aad; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .txn .amt { color: #f3e2a3; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .txn .amt .pay { display: block; font-size: 10.5px; font-weight: 400; color: #6a7a8d; margin-top: 1px; }
+
+  .empty-state { text-align: center; padding: 28px; color: #6a7a8d; font-size: 14px; }
+
+  .cta {
+    display:block; text-align:center; text-decoration:none;
+    margin: 6px 0 4px; padding: 14px;
+    background: linear-gradient(135deg, #f0db8e, #d4a547); color:#1a1408;
+    font-weight:800; letter-spacing:1px; border-radius:14px;
+    box-shadow:0 8px 22px rgba(212,165,71,.35);
+  }
+  .cta:active { transform: translateY(1px); }
+
+  footer { padding: 18px 4px 26px; font-size: 11px; color: #4a5a6d; text-align: center; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">🧪 這是 <b>示範儀表板</b>，數字皆為虛構假資料 ·「毛孩之家（示範店）」</div>
+
+<div id="dashboard" class="app">
+  <header>
+    <div class="brand">
+      <div class="logo">🐾</div>
+      <div>
+        <h1 class="title">營業儀表板</h1>
+        <div class="period-label" id="periodLabel">—</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="exportBtn" class="icon-btn" title="匯出本期交易為 CSV" disabled>📥</button>
+      <button id="refreshBtn" class="icon-btn" title="重新整理">
+        <span class="spin">🔄</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="period-tabs">
+    <button data-period="current_month" class="active">本月</button>
+    <button data-period="last_month">上月</button>
+    <button data-period="current_year">本年</button>
+    <button data-period="last_7_days">近 7 天</button>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi hero">
+      <div class="kpi-label">💰 總營收</div>
+      <div class="kpi-value" id="kpiRevenue">—</div>
+      <div class="kpi-growth flat" id="kpiGrowth">—</div>
+    </div>
+    <div class="kpi"><div class="kpi-label">🧾 交易筆數</div><div class="kpi-value" id="kpiCount">—</div></div>
+    <div class="kpi"><div class="kpi-label">📐 平均單筆</div><div class="kpi-value" id="kpiAvg">—</div></div>
+    <div class="kpi">
+      <div class="kpi-label">🏦 儲值金池</div>
+      <div class="kpi-value small" id="kpiPool">—</div>
+      <div class="kpi-sub">全客戶餘額總計</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>美容師業績</h2>
+    <div class="card" id="byGroomer"><div class="empty-state">載入中…</div></div>
+  </section>
+
+  <section>
+    <h2>付款方式</h2>
+    <div class="card" id="byPayment"><div class="empty-state">載入中…</div></div>
+  </section>
+
+  <section>
+    <h2>最近交易</h2>
+    <div class="card" id="recent"><div class="empty-state">載入中…</div></div>
+  </section>
+
+  <a class="cta" href="intro.html">想幫自己的店裝一套？看完整介紹 →</a>
+
+  <footer>
+    <span id="generatedAt"></span><br>
+    🧪 示範用假資料 · 正式版每位老闆有自己的密碼，數字來自店家自己的 Google 試算表
+  </footer>
+</div>
+
+<script>
+// ===== Demo：完全離線、假資料，不連任何後端 =====
+const DEMO_PETS = [
+  ["王小姐","豆豆","0912-***-321"], ["陳先生","Lucky","0933-***-118"],
+  ["林小姐","麻糬","0922-***-540"], ["黃太太","球球","0987-***-203"],
+  ["張先生","奶茶","0916-***-877"], ["吳小姐","黑嚕","0955-***-492"],
+  ["劉小姐","布丁","0978-***-061"], ["蔡先生","可可","0930-***-715"],
+  ["鄭太太","妞妞","0918-***-336"], ["許小姐","橘子","0966-***-829"],
+  ["楊先生","胖虎","0911-***-657"], ["周小姐","Coco","0921-***-148"],
+  ["何太太","小白","0938-***-902"], ["郭先生","阿肥","0952-***-374"],
+  ["曾小姐","糖糖","0975-***-580"]
+];
+const SERVICES = [
+  ["全身大美容", 1800], ["全身洗澡+剪毛", 1200], ["SPA 藥浴", 1500],
+  ["基礎清潔洗澡", 600], ["指甲修剪+清耳", 300], ["剃毛造型", 900]
+];
+const GROOMERS = ["小美", "阿哲", "Nina", "Coco"];
+const PAYMENTS = ["現金", "LINE Pay", "信用卡", "儲值扣款"];
+
+// 確定性亂數（mulberry32）→ 重新整理/切換期間數字穩定
+function rng(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function pick(r, arr) { return arr[Math.floor(r() * arr.length)]; }
+
+function pad(n) { return String(n).padStart(2, "0"); }
+
+// 產生某期間的假交易
+function genRecords(seed, count, dateFn) {
+  const r = rng(seed);
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const [owner, pet, phone] = pick(r, DEMO_PETS);
+    const [svc, base] = pick(r, SERVICES);
+    const amount = base + Math.floor(r() * 5) * 100 - 100; // base ±
+    out.push({
+      date: dateFn(r, i),
+      phone, ownerName: owner, petName: pet,
+      service: svc, amount: Math.max(200, amount),
+      payment: pick(r, PAYMENTS), groomer: pick(r, GROOMERS),
+      notes: ""
+    });
+  }
+  out.sort((a, b) => (a.date < b.date ? 1 : -1));
+  return out;
+}
+
+function aggregate(records, keyFn) {
+  const m = {};
+  records.forEach((r) => {
+    const k = keyFn(r);
+    if (!m[k]) m[k] = { key: k, revenue: 0, count: 0 };
+    m[k].revenue += r.amount; m[k].count++;
+  });
+  return Object.values(m).sort((a, b) => b.revenue - a.revenue);
+}
+
+const NOW = new Date(2026, 5, 13); // 2026-06-13（示範定格）
+
+function buildDataset(period) {
+  let records, label, growthPct;
+  if (period === "current_month") {
+    label = "2026 年 6 月";
+    records = genRecords(601, 38, (r, i) => `2026-06-${pad(1 + Math.floor(r() * 13))}`);
+    growthPct = 18.4;
+  } else if (period === "last_month") {
+    label = "2026 年 5 月";
+    records = genRecords(502, 54, (r) => `2026-05-${pad(1 + Math.floor(r() * 31))}`);
+    growthPct = 12.7;
+  } else if (period === "current_year") {
+    label = "2026 年";
+    records = genRecords(2026, 96, (r) => `2026-${pad(1 + Math.floor(r() * 6))}-${pad(1 + Math.floor(r() * 28))}`);
+    growthPct = 22.1;
+  } else { // last_7_days
+    label = "近 7 天";
+    records = genRecords(77, 14, (r, i) => `2026-06-${pad(7 + Math.floor(r() * 7))}`);
+    growthPct = 9.3;
+  }
+  const totalRevenue = records.reduce((s, r) => s + r.amount, 0);
+  const count = records.length;
+  return {
+    period: { label },
+    totalRevenue,
+    transactionCount: count,
+    avgPerTransaction: Math.round(totalRevenue / count),
+    storedValuePool: 184500,
+    generatedAt: NOW.toISOString(),
+    comparison: {
+      growthPct,
+      label: "去年同期",
+      lastYearRevenue: Math.round(totalRevenue / (1 + growthPct / 100)),
+      lastYearCount: Math.round(count / (1 + growthPct / 100))
+    },
+    byGroomer: aggregate(records, (r) => r.groomer),
+    byPayment: aggregate(records, (r) => r.payment),
+    records
+  };
+}
+
+// ===== DOM / 狀態 =====
+const refreshBtn = document.getElementById("refreshBtn");
+const exportBtn = document.getElementById("exportBtn");
+const periodLabel = document.getElementById("periodLabel");
+const periodTabs = document.querySelectorAll(".period-tabs button");
+let currentPeriod = "current_month";
+let currentData = null;
+
+loadPeriod(currentPeriod);
+
+refreshBtn.addEventListener("click", () => loadPeriod(currentPeriod));
+exportBtn.addEventListener("click", exportCSV);
+periodTabs.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    periodTabs.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentPeriod = btn.dataset.period;
+    loadPeriod(currentPeriod);
+  });
+});
+
+function loadPeriod(period) {
+  refreshBtn.classList.add("loading");
+  refreshBtn.disabled = true;
+  // 模擬一點點載入延遲，更像真的
+  setTimeout(() => {
+    renderAll(buildDataset(period));
+    refreshBtn.classList.remove("loading");
+    refreshBtn.disabled = false;
+  }, 280);
+}
+
+// ===== 渲染 =====
+function renderAll(d) {
+  currentData = d;
+  exportBtn.disabled = !(d.records && d.records.length);
+  periodLabel.textContent = d.period ? d.period.label : "";
+  document.getElementById("kpiRevenue").textContent = fmtMoney(d.totalRevenue);
+  document.getElementById("kpiCount").textContent = (d.transactionCount || 0).toLocaleString();
+  document.getElementById("kpiAvg").textContent = fmtMoney(d.avgPerTransaction);
+  document.getElementById("kpiPool").textContent = fmtMoney(d.storedValuePool);
+  document.getElementById("generatedAt").textContent = d.generatedAt
+    ? "資料更新：" + new Date(d.generatedAt).toLocaleString("zh-TW", { hour12: false })
+    : "";
+  renderGrowth(d.comparison);
+  renderBars("byGroomer", d.byGroomer, d.totalRevenue);
+  renderBars("byPayment", d.byPayment, d.totalRevenue);
+  renderRecent((d.records || []).slice(0, 15));
+}
+
+function renderGrowth(c) {
+  const el = document.getElementById("kpiGrowth");
+  if (!c || c.growthPct === null || c.growthPct === undefined) {
+    el.className = "kpi-growth flat"; el.textContent = "去年同期無資料"; return;
+  }
+  const pct = c.growthPct;
+  const sign = pct > 0 ? "↑" : pct < 0 ? "↓" : "→";
+  const dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+  el.className = "kpi-growth " + dir;
+  el.textContent = `${sign} ${Math.abs(pct).toFixed(1)}% vs ${c.label}`;
+  el.title = `去年同期營收 ${fmtMoney(c.lastYearRevenue)} · ${c.lastYearCount} 筆`;
+}
+
+function renderBars(containerId, items, total) {
+  const el = document.getElementById(containerId);
+  if (!items || items.length === 0) { el.innerHTML = `<div class="empty-state">本期無資料</div>`; return; }
+  el.innerHTML = items.map((it) => {
+    const pct = total > 0 ? Math.round((it.revenue / total) * 100) : 0;
+    return `
+      <div class="bar-row">
+        <div class="bar-label">${escapeHtml(it.key)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="bar-value">${fmtMoney(it.revenue)}<span class="count">${it.count} 筆 · ${pct}%</span></div>
+      </div>`;
+  }).join("");
+}
+
+function renderRecent(list) {
+  const el = document.getElementById("recent");
+  if (!list || list.length === 0) { el.innerHTML = `<div class="empty-state">本期無交易</div>`; return; }
+  el.innerHTML = list.map((r) => `
+    <div class="txn">
+      <div class="date">${escapeHtml(r.date.slice(5))}</div>
+      <div class="main">
+        <strong>${escapeHtml(r.ownerName || "(無姓名)")}</strong> · ${escapeHtml(r.petName || "")}
+        <div class="sub">${escapeHtml(r.service || "")}${r.groomer ? " · " + escapeHtml(r.groomer) : ""}</div>
+      </div>
+      <div class="amt">${fmtMoney(r.amount)}<span class="pay">${escapeHtml(r.payment || "")}</span></div>
+    </div>
+  `).join("");
+}
+
+// ===== CSV 匯出（示範也能匯出，更有感）=====
+function exportCSV() {
+  if (!currentData || !currentData.records || !currentData.records.length) return;
+  const headers = ["日期", "主人電話", "主人姓名", "寵物名", "服務項目", "金額", "付款方式", "負責美容師", "備註"];
+  const rows = currentData.records.map((r) => [r.date, r.phone, r.ownerName, r.petName, r.service, r.amount, r.payment, r.groomer, r.notes]);
+  const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const label = (currentData.period && currentData.period.label) || "本期";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `示範交易_${safeFilename(label)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+function csvEscape(v) { const s = v == null ? "" : String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function safeFilename(s) { return String(s).replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, ""); }
+function fmtMoney(n) { return "NT$ " + (Number(n) || 0).toLocaleString(); }
+function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+</script>
+</body>
+</html>

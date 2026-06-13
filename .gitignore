@@ -7,3 +7,6 @@ employee-richmenu-*.png
 make_menu.py
 *_richmenu_id
 .*_richmenu_id
+
+# 本機預覽用（preview server 設定），不上 public
+.claude/

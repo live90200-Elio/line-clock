@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>預約小幫手（示範）— 小事系統 Demo</title>
+<meta name="theme-color" content="#0f1724">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #0f1724; color: #e8ecf5; line-height: 1.55;
+  }
+  .app { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+  .demo-banner {
+    max-width: 960px; margin: 0 auto; padding: 9px 16px;
+    background: linear-gradient(135deg, rgba(122,200,232,.16), rgba(122,200,232,.06));
+    border-bottom: 1px solid rgba(122,200,232,.3);
+    font-size: 12.5px; color: #aee2f6; text-align: center; letter-spacing: .3px;
+  }
+  .demo-banner b { color: #d6f1fb; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 4px 16px; flex-wrap: wrap; }
+  h1.title { font-size: 22px; color: #7ac8e8; }
+  .date-label { font-size: 14px; color: #e8ecf5; margin-top: 4px; }
+  .date-label .sub { color: #8a9aad; font-size: 12px; }
+  .header-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    background: #1a2332; border: 1px solid #2d3b52; color: #e8ecf5;
+    padding: 8px 12px; font-size: 14px; border-radius: 8px; cursor: pointer;
+  }
+  .icon-btn:hover { background: #24324a; }
+  .icon-btn:disabled { opacity: .5; cursor: wait; }
+  .icon-btn.loading .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  section { margin-bottom: 24px; }
+  h2 { font-size: 16px; color: #e8ecf5; margin-bottom: 12px; padding-left: 8px; border-left: 3px solid #7ac8e8; }
+  h2.warn { border-left-color: #ff9a5c; }
+
+  .card { background: #1a2332; border-radius: 12px; padding: 16px; border: 1px solid #2d3b52; }
+
+  .staff-box {
+    background: #0f1724; border: 1px solid #2d3b52; border-radius: 8px;
+    padding: 12px; font-family: -apple-system, "SF Mono", "Menlo", monospace;
+    font-size: 14px; color: #e8ecf5; white-space: pre-wrap; word-break: break-word;
+    margin-bottom: 12px; min-height: 60px;
+  }
+  .primary-btn {
+    background: #7ac8e8; color: #0f1724; border: none; border-radius: 8px;
+    padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%;
+  }
+  .primary-btn:hover { background: #9bd6ee; }
+  .primary-btn.copied { background: #a8d8b9; }
+
+  .reminder-list { display: flex; flex-direction: column; gap: 12px; }
+  .reminder-card { background: #1a2332; border-radius: 12px; padding: 14px; border: 1px solid #2d3b52; }
+  .reminder-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+  .reminder-head .owner { font-size: 16px; font-weight: 700; color: #e8d07a; }
+  .reminder-head .phone { font-size: 13px; color: #8a9aad; font-variant-numeric: tabular-nums; }
+  .reminder-head .phone a { color: #8a9aad; text-decoration: none; }
+  .reminder-head .phone a:hover { color: #7ac8e8; }
+  .reminder-sub { font-size: 13px; color: #8a9aad; margin-bottom: 10px; }
+  .reminder-sub .cut { color: #e8d07a; }
+  .reminder-msg {
+    background: #0f1724; border: 1px solid #2d3b52; border-radius: 8px;
+    padding: 10px 12px; font-size: 14px; white-space: pre-wrap; word-break: break-word;
+    margin-bottom: 10px; color: #e8ecf5;
+  }
+  .copy-btn { background: #24324a; color: #e8ecf5; border: 1px solid #2d3b52; border-radius: 8px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+  .copy-btn:hover { background: #2d3b52; }
+  .copy-btn.copied { background: #2d5a3f; border-color: #3d7a56; color: #a8d8b9; }
+
+  .missing-card { background: #2a1f15; border: 1px solid #5a3f28; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; font-size: 14px; color: #ffcfa0; }
+  .missing-card strong { color: #ffb366; }
+  .missing-card .reason { font-size: 12px; color: #c99874; margin-top: 2px; }
+
+  .empty-state { text-align: center; padding: 30px; color: #6a7a8d; font-size: 14px; }
+
+  .cta {
+    display:block; text-align:center; text-decoration:none;
+    margin: 4px 0 8px; padding: 14px;
+    background:#7ac8e8; color:#0f1724; font-weight:800; letter-spacing:1px;
+    border-radius:12px;
+  }
+  .cta:active { transform: translateY(1px); }
+
+  footer { padding: 20px 4px; font-size: 11px; color: #4a5a6d; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">🧪 這是 <b>示範預約小幫手</b>，內容皆為虛構假資料 ·「毛孩之家（示範店）」</div>
+
+<div id="dashboard" class="app">
+  <header>
+    <div>
+      <h1 class="title">📅 預約小幫手</h1>
+      <div class="date-label" id="dateLabel">載入中…</div>
+    </div>
+    <div class="header-actions">
+      <button id="refreshBtn" class="icon-btn" title="重新整理">
+        <span class="spin">🔄</span>
+      </button>
+    </div>
+  </header>
+
+  <section>
+    <h2>📋 員工清單（貼到員工群組）</h2>
+    <div class="card">
+      <div class="staff-box" id="staffContent">載入中…</div>
+      <button id="copyStaffBtn" class="primary-btn" disabled>📋 複製全部</button>
+    </div>
+  </section>
+
+  <section id="remindersSection">
+    <h2>💬 客戶提醒草稿（逐筆貼給客戶）</h2>
+    <div class="reminder-list" id="remindersList">
+      <div class="empty-state">載入中…</div>
+    </div>
+  </section>
+
+  <section id="missingSection" hidden>
+    <h2 class="warn">⚠️ 需要手動通知（查無主人）</h2>
+    <div id="missingList"></div>
+  </section>
+
+  <a class="cta" href="intro.html">想幫自己的店裝一套？看完整介紹 →</a>
+
+  <footer>🧪 示範用假資料 · 正式版每天早上自動整理隔天預約，複製貼上兩次就搞定</footer>
+</div>
+
+<script>
+// ===== Demo：完全離線、假資料，不連任何後端 =====
+function buildDemo() {
+  const staffSummary =
+    "📅 6/14（日）預約 5 件\n" +
+    "─────────────\n" +
+    "10:00  豆豆（貴賓）全身大美容 ✂️  — 小美\n" +
+    "11:30  Lucky（柴犬）洗澡+剪毛 ✂️ — 阿哲\n" +
+    "13:00  麻糬（馬爾濟斯）SPA 藥浴   — Nina\n" +
+    "14:30  球球（柯基）基礎清潔洗澡   — Coco\n" +
+    "16:00  奶茶（米克斯）剃毛造型 ✂️  — 小美";
+
+  const reminders = [
+    {
+      ownerName: "王小姐", phone: "0912345321", petName: "豆豆", time: "10:00",
+      isHaircut: true,
+      message: "王小姐您好🐾 提醒您豆豆明天 6/14（日）10:00 預約全身大美容～\n請記得帶牽繩，當天若需調整時間再跟我們說喔！— 毛孩之家"
+    },
+    {
+      ownerName: "陳先生", phone: "0933000118", petName: "Lucky", time: "11:30",
+      isHaircut: true,
+      message: "陳先生您好🐾 Lucky 明天 6/14（日）11:30 預約洗澡+剪毛，期待見到牠～\n如需取消請提前告知，謝謝！— 毛孩之家"
+    },
+    {
+      ownerName: "林小姐", phone: "0922000540", petName: "麻糬", time: "13:00",
+      isHaircut: false,
+      message: "林小姐您好🐾 麻糬明天 6/14（日）13:00 預約 SPA 藥浴，記得讓牠先別吃太飽喔！— 毛孩之家"
+    },
+    {
+      ownerName: "黃太太", phone: "0987000203", petName: "球球", time: "14:30",
+      isHaircut: false,
+      message: "黃太太您好🐾 球球明天 6/14（日）14:30 預約基礎清潔洗澡，到店再麻煩按門鈴～ — 毛孩之家"
+    }
+  ];
+
+  const missingPhone = [
+    { petName: "奶茶", time: "16:00", service: "剃毛造型", isHaircut: true,
+      reason: "預約系統查無主人電話，需手動聯絡", phone: "" }
+  ];
+
+  return {
+    dayWord: "明天", dateLabel: "6/14", weekday: "日", totalCount: 5,
+    staffSummary, reminders, missingPhone
+  };
+}
+
+// ===== DOM =====
+const refreshBtn = document.getElementById("refreshBtn");
+const dateLabel = document.getElementById("dateLabel");
+const staffContent = document.getElementById("staffContent");
+const copyStaffBtn = document.getElementById("copyStaffBtn");
+const remindersList = document.getElementById("remindersList");
+const missingSection = document.getElementById("missingSection");
+const missingList = document.getElementById("missingList");
+let currentData = null;
+
+loadData();
+refreshBtn.addEventListener("click", loadData);
+copyStaffBtn.addEventListener("click", copyStaff);
+
+function loadData() {
+  refreshBtn.classList.add("loading");
+  refreshBtn.disabled = true;
+  setTimeout(() => {
+    renderAll(buildDemo());
+    refreshBtn.classList.remove("loading");
+    refreshBtn.disabled = false;
+  }, 260);
+}
+
+function renderAll(d) {
+  currentData = d;
+  dateLabel.innerHTML = `<strong>${escapeHtml(d.dayWord)} ${escapeHtml(d.dateLabel)} (${escapeHtml(d.weekday)})</strong> · <span class="sub">${d.totalCount} 件預約</span>`;
+  staffContent.textContent = d.staffSummary || "(無)";
+  copyStaffBtn.disabled = !d.staffSummary || d.totalCount === 0;
+  copyStaffBtn.classList.remove("copied");
+  copyStaffBtn.textContent = "📋 複製全部";
+
+  if (!d.reminders || d.reminders.length === 0) {
+    remindersList.innerHTML = `<div class="empty-state">${d.totalCount === 0 ? "明天無預約 🌿" : "（沒有可自動提醒的客戶）"}</div>`;
+  } else {
+    remindersList.innerHTML = d.reminders.map(renderReminderCard).join("");
+    bindCopyButtons();
+  }
+
+  if (d.missingPhone && d.missingPhone.length > 0) {
+    missingSection.hidden = false;
+    missingList.innerHTML = d.missingPhone.map(renderMissingCard).join("");
+  } else {
+    missingSection.hidden = true;
+    missingList.innerHTML = "";
+  }
+}
+
+function renderReminderCard(r) {
+  const cutTag = r.isHaircut ? ' · <span class="cut">剪毛 ✂️</span>' : " · 洗澡";
+  return `
+    <div class="reminder-card">
+      <div class="reminder-head">
+        <div class="owner">${escapeHtml(r.ownerName)}</div>
+        <div class="phone"><a href="tel:${escapeHtml(r.phone)}">📞 ${escapeHtml(formatPhone(r.phone))}</a></div>
+      </div>
+      <div class="reminder-sub">${escapeHtml(r.petName)} · ${escapeHtml(r.time)}${cutTag}</div>
+      <div class="reminder-msg">${escapeHtml(r.message)}</div>
+      <button class="copy-btn" data-text="${escapeAttr(r.message)}">📋 複製此則</button>
+    </div>`;
+}
+
+function renderMissingCard(m) {
+  const cut = m.isHaircut ? " ✂️" : "";
+  return `
+    <div class="missing-card">
+      <strong>${escapeHtml(m.petName)}${cut}</strong> · ${escapeHtml(m.time)} · ${escapeHtml(m.service)}
+      <div class="reason">${escapeHtml(m.reason)}${m.phone ? `（描述欄電話：${escapeHtml(m.phone)}）` : ""}</div>
+    </div>`;
+}
+
+function bindCopyButtons() {
+  document.querySelectorAll(".copy-btn").forEach((btn) => {
+    btn.addEventListener("click", () => copyToClipboard(btn.dataset.text, btn, "📋 複製此則"));
+  });
+}
+function copyStaff() {
+  if (!currentData || !currentData.staffSummary) return;
+  copyToClipboard(currentData.staffSummary, copyStaffBtn, "📋 複製全部");
+}
+async function copyToClipboard(text, btn, originalLabel) {
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.classList.add("copied");
+    btn.textContent = "✅ 已複製，去貼上吧";
+    setTimeout(() => { btn.classList.remove("copied"); btn.textContent = originalLabel; }, 1800);
+  } catch (err) { alert("複製失敗（請手動選取）：" + err.message); }
+}
+function formatPhone(p) { if (!p || p.length !== 10) return p || ""; return `${p.slice(0, 4)}-${p.slice(4, 7)}-${p.slice(7)}`; }
+function escapeHtml(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function escapeAttr(s) { return escapeHtml(s).replace(/\n/g, "&#10;"); }
+</script>
+</body>
+</html>

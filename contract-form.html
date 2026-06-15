@@ -51,21 +51,10 @@
   <!-- 載入中 -->
   <div id="loading" class="loading">載入中…</div>
 
-  <!-- 已簽過 -->
-  <div id="already" style="display:none;">
-    <div class="center">
-      <div class="big">✅</div>
-      <h2>您已簽署過定型化契約</h2>
-      <p id="alreadyInfo" style="color:#666;"></p>
-      <p>本契約一位飼主只需簽署一次，無需重簽 🙌</p>
-      <p><a id="alreadyPdf" href="#" target="_blank">＞ 開啟我的契約 PDF</a></p>
-    </div>
-  </div>
-
   <!-- 表單 -->
   <div id="form" style="display:none;">
     <h1>犬、貓美容服務定型化契約</h1>
-    <div class="sub">依消保法之定型化契約・線上閱讀並電子簽署<br>一位飼主簽一次即可，簽署完 PDF 自動存檔</div>
+    <div class="sub">依消保法之定型化契約・線上閱讀並電子簽署<br>每次美容前可重新填寫毛孩最新狀況，簽署完 PDF 自動存檔</div>
 
     <div class="card">
       <h2>① 飼主資料</h2>
@@ -216,25 +205,14 @@ let liffUserId = "", liffDisplayName = "";
     // 非 LINE 環境（電腦測試）：允許繼續，但 userId 空 → 送出時後端會擋
     console.warn("liff init fail", e);
   }
-  // 一人簽一次（沒 userId 就跳過，直接顯示表單）
-  if (liffUserId) {
-    try {
-      const r = await fetch(API_URL + "?check=" + encodeURIComponent(liffUserId));
-      const out = await r.json();
-      if (out.signed) {
-        $("alreadyInfo").textContent = `（${out.petName || ""}　簽署日：${out.signedAt || ""}）`;
-        if (out.pdfUrl) $("alreadyPdf").href = out.pdfUrl; else $("alreadyPdf").style.display = "none";
-        show("already"); return;
-      }
-    } catch (e) { console.warn("check fail", e); }
-  }
+  // 不限填寫次數：每次都直接顯示表單（毛孩健康狀況會變，可重複填寫最新狀況）
   // 載入契約全文（與 PDF 同源）
   loadTerms();
   if (liffDisplayName && !$("name").value) $("name").value = liffDisplayName;
   show("form"); resizeCanvas();
 })();
 
-function show(id) { ["loading","already","form","done"].forEach(x => $(x).style.display = x === id ? "block" : "none"); }
+function show(id) { ["loading","form","done"].forEach(x => $(x).style.display = x === id ? "block" : "none"); }
 
 async function loadTerms() {
   try {

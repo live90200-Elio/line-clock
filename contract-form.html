@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>犬貓美容定型化契約・線上簽署</title>
+<style>
+  :root { --brown:#8a5a2b; --brown-deep:#6e4620; --bg:#f7f3ec; --card:#fff; --line:#e5dccd; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family:"Microsoft JhengHei","Noto Sans CJK TC",sans-serif; background:var(--bg); color:#333; line-height:1.6; }
+  .wrap { max-width:580px; margin:0 auto; padding:16px 14px 60px; }
+  h1 { font-size:1.3rem; text-align:center; color:var(--brown-deep); margin:8px 0 2px; }
+  .sub { text-align:center; color:#998; font-size:.82rem; margin-bottom:16px; }
+  .card { background:var(--card); border-radius:16px; padding:16px 14px; margin-bottom:14px; box-shadow:0 2px 12px rgba(0,0,0,.05); }
+  .card h2 { font-size:.98rem; color:var(--brown); margin:0 0 10px; border-bottom:2px solid var(--line); padding-bottom:6px; }
+  label.f { display:block; font-size:.85rem; color:#666; margin:10px 0 4px; }
+  label.f .opt { color:#bba; font-weight:400; font-size:.78rem; }
+  label.f .req { color:#c0392b; }
+  input[type=text], input[type=tel], input[type=number] { width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:10px; font-size:1rem; }
+  .row2 { display:flex; gap:8px; } .row2 > div { flex:1; }
+  .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:2px; }
+  .chips label { display:inline-flex; align-items:center; gap:4px; border:1.5px solid var(--line); border-radius:20px; padding:6px 11px; font-size:.84rem; color:#555; cursor:pointer; }
+  .chips label:has(input:checked) { border-color:var(--brown); background:#fdf8f0; color:var(--brown-deep); font-weight:600; }
+  .chips input { display:none; }
+  .terms { max-height:300px; overflow-y:auto; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:.8rem; background:#fcfaf6; }
+  .terms .policy-h { font-weight:700; color:var(--brown); margin-bottom:4px; }
+  .terms table { width:100%; border-collapse:collapse; margin-bottom:8px; }
+  .terms table td { border:1px solid #d8cdb6; padding:4px 6px; font-size:.78rem; }
+  .terms table.pol td:first-child { background:#faf6ee; width:40%; }
+  .terms p { margin:4px 0; }
+  .terms .t-note { background:#fff9ec; border:1px solid #f5e6c0; padding:6px 9px; border-radius:6px; }
+  .agree { display:flex; align-items:flex-start; gap:8px; margin-top:14px; font-size:.9rem; }
+  .agree input { width:20px; height:20px; margin-top:2px; flex:none; }
+  canvas { width:100%; height:190px; border:2px dashed var(--brown); border-radius:12px; background:#fff; touch-action:none; }
+  .sig-bar { display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+  .clear-btn { background:none; border:1px solid var(--line); border-radius:8px; padding:6px 14px; color:#888; font-size:.85rem; }
+  .submit { width:100%; padding:15px; margin-top:8px; border:none; border-radius:12px; background:var(--brown); color:#fff; font-size:1.1rem; font-weight:700; }
+  .submit:disabled { background:#ccc; }
+  .msg { text-align:center; padding:14px; border-radius:10px; margin-top:12px; font-size:.92rem; display:none; }
+  .msg.err { background:#fdecec; color:#c0392b; display:block; }
+  .center { text-align:center; padding:48px 20px; }
+  .center .big { font-size:3rem; }
+  .center h2 { color:var(--brown-deep); border:none; }
+  .center a { color:var(--brown); }
+  .loading { text-align:center; color:#998; padding:60px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 載入中 -->
+  <div id="loading" class="loading">載入中…</div>
+
+  <!-- 已簽過 -->
+  <div id="already" style="display:none;">
+    <div class="center">
+      <div class="big">✅</div>
+      <h2>您已簽署過定型化契約</h2>
+      <p id="alreadyInfo" style="color:#666;"></p>
+      <p>本契約一位飼主只需簽署一次，無需重簽 🙌</p>
+      <p><a id="alreadyPdf" href="#" target="_blank">＞ 開啟我的契約 PDF</a></p>
+    </div>
+  </div>
+
+  <!-- 表單 -->
+  <div id="form" style="display:none;">
+    <h1>犬、貓美容服務定型化契約</h1>
+    <div class="sub">依消保法之定型化契約・線上閱讀並電子簽署<br>一位飼主簽一次即可，簽署完 PDF 自動存檔</div>
+
+    <div class="card">
+      <h2>① 飼主資料</h2>
+      <label class="f">姓名 <span class="req">*</span></label><input type="text" id="name" placeholder="您的姓名">
+      <label class="f">聯絡電話 <span class="req">*</span></label><input type="tel" id="phone" placeholder="09xxxxxxxx">
+      <label class="f">通訊地址 <span class="opt">選填</span></label><input type="text" id="ownerAddress" placeholder="（選填）">
+      <div class="row2">
+        <div><label class="f">是否飼主本人 <span class="opt">選填</span></label>
+          <div class="chips" id="ownerIsSelf">
+            <label><input type="radio" name="isSelf" value="是" checked>是</label>
+            <label><input type="radio" name="isSelf" value="否">否</label>
+          </div></div>
+        <div><label class="f">與飼主關係 <span class="opt">選填</span></label><input type="text" id="ownerRelation" placeholder="例：家人"></div>
+      </div>
+      <div class="row2">
+        <div><label class="f">緊急聯絡人 <span class="opt">選填</span></label><input type="text" id="emergencyName" placeholder="（選填）"></div>
+        <div><label class="f">緊急聯絡人電話 <span class="opt">選填</span></label><input type="tel" id="emergencyPhone" placeholder="（選填）"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>② 寵物資料</h2>
+      <label class="f">寵物名 <span class="req">*</span></label><input type="text" id="petName" placeholder="毛孩的名字">
+      <div class="row2">
+        <div><label class="f">犬／貓 <span class="opt">選填</span></label>
+          <div class="chips"><label><input type="radio" name="species" value="犬">犬</label><label><input type="radio" name="species" value="貓">貓</label></div></div>
+        <div><label class="f">品種 <span class="opt">選填</span></label><input type="text" id="breed" placeholder="（選填）"></div>
+      </div>
+      <div class="row2">
+        <div><label class="f">年齡 <span class="opt">選填</span></label><input type="text" id="petAge" placeholder="例：3歲"></div>
+        <div><label class="f">性別 <span class="opt">選填</span></label>
+          <div class="chips"><label><input type="radio" name="gender" value="公">公</label><label><input type="radio" name="gender" value="母">母</label></div></div>
+      </div>
+      <label class="f">絕育 <span class="opt">選填</span></label>
+      <div class="chips"><label><input type="radio" name="neuter" value="已絕育">已絕育</label><label><input type="radio" name="neuter" value="未絕育">未絕育</label></div>
+      <label class="f">晶片號碼 <span class="opt">選填</span></label><input type="text" id="chipNo" placeholder="（選填）">
+    </div>
+
+    <div class="card">
+      <h2>③ 個性與健康（選填，助美容師照顧）</h2>
+      <label class="f">個性傾向</label>
+      <div class="chips" id="personality">
+        <label><input type="checkbox" value="親近人">親近人</label>
+        <label><input type="checkbox" value="親近狗">親近狗</label>
+        <label><input type="checkbox" value="容易緊張">容易緊張</label>
+        <label><input type="checkbox" value="有攻擊性">有攻擊性</label>
+        <label><input type="checkbox" value="會咬人">會咬人</label>
+        <label><input type="checkbox" value="會咬狗貓">會咬狗貓</label>
+        <label><input type="checkbox" value="不會咬人">不會咬人</label>
+        <label><input type="checkbox" value="不會咬狗貓">不會咬狗貓</label>
+      </div>
+      <div class="row2">
+        <div><label class="f">外觀</label>
+          <div class="chips"><label><input type="radio" name="appearance" value="正常">正常</label><label><input type="radio" name="appearance" value="異常">異常</label></div></div>
+        <div><label class="f">外寄生蟲</label>
+          <div class="chips"><label><input type="radio" name="parasite" value="無">無</label><label><input type="radio" name="parasite" value="跳蚤">跳蚤</label><label><input type="radio" name="parasite" value="壁蝨">壁蝨</label></div></div>
+      </div>
+      <label class="f">病史</label>
+      <div class="chips" id="medicalHistory">
+        <label><input type="checkbox" value="心臟病">心臟病</label><label><input type="checkbox" value="氣喘">氣喘</label>
+        <label><input type="checkbox" value="氣管塌陷">氣管塌陷</label><label><input type="checkbox" value="白內障">白內障</label>
+        <label><input type="checkbox" value="癲癇">癲癇</label><label><input type="checkbox" value="心絲蟲">心絲蟲</label>
+        <label><input type="checkbox" value="艾利希體">艾利希體</label><label><input type="checkbox" value="腹膜炎">腹膜炎</label>
+        <label><input type="checkbox" value="腹積水">腹積水</label><label><input type="checkbox" value="手術外傷未癒">手術外傷未癒</label>
+        <label><input type="checkbox" value="髖關節問題">髖關節問題</label><label><input type="checkbox" value="骨折">骨折</label>
+        <label><input type="checkbox" value="腸炎">腸炎</label><label><input type="checkbox" value="血便">血便</label>
+        <label><input type="checkbox" value="血尿">血尿</label><label><input type="checkbox" value="懷孕">懷孕</label>
+        <label><input type="checkbox" value="傳染性疾病">傳染性疾病</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>④ 服務與付款（選填）</h2>
+      <label class="f">服務項目</label>
+      <div class="chips" id="services">
+        <label><input type="checkbox" value="洗澡">洗澡</label><label><input type="checkbox" value="剪毛">剪毛</label>
+        <label><input type="checkbox" value="大美容">大美容</label><label><input type="checkbox" value="小美容">小美容</label>
+        <label><input type="checkbox" value="其他">其他</label>
+      </div>
+      <div class="row2">
+        <div><label class="f">金額</label><input type="number" id="amount" placeholder="（選填）"></div>
+        <div><label class="f">支付方式</label>
+          <div class="chips"><label><input type="radio" name="pay" value="現金">現金</label><label><input type="radio" name="pay" value="信用卡">信用卡</label><label><input type="radio" name="pay" value="其他">其他</label></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⑤ 緊急就醫指定獸醫（選填）</h2>
+      <label class="f">指定方式</label>
+      <div class="chips" id="vetBy">
+        <label><input type="radio" name="vetBy" value="甲方" checked>我指定</label>
+        <label><input type="radio" name="vetBy" value="乙方">由店家就近處理</label>
+      </div>
+      <div id="vetFields">
+        <label class="f">獸醫院名稱</label><input type="text" id="vetName" placeholder="（選填）">
+        <div class="row2">
+          <div><label class="f">電話</label><input type="tel" id="vetTel" placeholder="（選填）"></div>
+          <div><label class="f">地址</label><input type="text" id="vetAddr" placeholder="（選填）"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⑥ 契約條款</h2>
+      <div class="terms" id="terms">載入契約全文中…</div>
+      <label class="agree"><input type="checkbox" id="agree"><span>本人已詳閱並同意上述定型化契約條款，且確認所填資料正確。</span></label>
+    </div>
+
+    <div class="card">
+      <h2>⑦ 飼主簽名</h2>
+      <canvas id="pad"></canvas>
+      <div class="sig-bar"><span style="font-size:.8rem;color:#998;">請用手指在框內簽名</span><button class="clear-btn" id="clear">清除重簽</button></div>
+    </div>
+
+    <button class="submit" id="submit">確認簽署並送出</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <!-- 完成 -->
+  <div id="done" style="display:none;">
+    <div class="center">
+      <div class="big">✅</div>
+      <h2>簽署完成！</h2>
+      <p>契約 PDF 已自動存檔，店家也收到通知。<br>感謝您的信任 🙌</p>
+      <p><a id="donePdf" href="#" target="_blank">＞ 開啟契約 PDF</a></p>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+// ⚠️ 部署後填：① LINE Developers 為這頁建的 LIFF ID ② 後端 GAS /exec 網址
+const LIFF_ID = "2009881783-ayeqQvBa";
+const API_URL = "https://script.google.com/macros/s/AKfycbx99cUYpq2gC5KjndYNQr_c9OWUrBvkREQo9YKT9J0a9NWgA6TMhOfC-c_KcA6Ya13j/exec";
+
+const $ = (id) => document.getElementById(id);
+let liffUserId = "", liffDisplayName = "";
+
+// ---- 啟動：LIFF 登入 → 查是否簽過 → 載入契約全文 ----
+(async function init() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    const prof = await liff.getProfile();
+    liffUserId = prof.userId; liffDisplayName = prof.displayName || "";
+  } catch (e) {
+    // 非 LINE 環境（電腦測試）：允許繼續，但 userId 空 → 送出時後端會擋
+    console.warn("liff init fail", e);
+  }
+  // 一人簽一次（沒 userId 就跳過，直接顯示表單）
+  if (liffUserId) {
+    try {
+      const r = await fetch(API_URL + "?check=" + encodeURIComponent(liffUserId));
+      const out = await r.json();
+      if (out.signed) {
+        $("alreadyInfo").textContent = `（${out.petName || ""}　簽署日：${out.signedAt || ""}）`;
+        if (out.pdfUrl) $("alreadyPdf").href = out.pdfUrl; else $("alreadyPdf").style.display = "none";
+        show("already"); return;
+      }
+    } catch (e) { console.warn("check fail", e); }
+  }
+  // 載入契約全文（與 PDF 同源）
+  loadTerms();
+  if (liffDisplayName && !$("name").value) $("name").value = liffDisplayName;
+  show("form"); resizeCanvas();
+})();
+
+function show(id) { ["loading","already","form","done"].forEach(x => $(x).style.display = x === id ? "block" : "none"); }
+
+async function loadTerms() {
+  try {
+    const r = await fetch(API_URL + "?terms=1");
+    const out = await r.json();
+    $("terms").innerHTML = out.termsHtml || "（契約全文載入失敗，請聯絡店家）";
+  } catch (e) { $("terms").innerHTML = "（契約全文載入失敗，請聯絡店家）"; }
+}
+
+// ---- 簽名板 ----
+const canvas = $("pad"), ctx = canvas.getContext("2d");
+let drawing = false, hasSig = false;
+function resizeCanvas() {
+  const r = canvas.getBoundingClientRect();
+  canvas.width = r.width * 2; canvas.height = r.height * 2;
+  ctx.scale(2, 2); ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.strokeStyle = "#222";
+}
+function pos(e) { const r = canvas.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
+function start(e) { drawing = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+function move(e) { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); hasSig = true; e.preventDefault(); }
+function end() { drawing = false; }
+canvas.addEventListener("mousedown", start); canvas.addEventListener("mousemove", move); window.addEventListener("mouseup", end);
+canvas.addEventListener("touchstart", start, {passive:false}); canvas.addEventListener("touchmove", move, {passive:false}); canvas.addEventListener("touchend", end);
+$("clear").addEventListener("click", () => { ctx.clearRect(0,0,canvas.width,canvas.height); hasSig = false; });
+window.addEventListener("resize", () => setTimeout(resizeCanvas, 200));
+
+// ---- 工具：取勾選 / 取單選 ----
+const getChecks = (id) => Array.from($(id).querySelectorAll("input:checked")).map(el => el.value);
+const getRadio = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ""; };
+
+// ---- 送出 ----
+$("submit").addEventListener("click", async () => {
+  const msg = $("msg"); msg.className = "msg"; msg.style.display = "none";
+  const fail = (t) => { msg.textContent = t; msg.className = "msg err"; window.scrollTo(0, document.body.scrollHeight); };
+
+  const name = $("name").value.trim();
+  const phone = $("phone").value.trim();
+  const petName = $("petName").value.trim();
+  if (!name) return fail("請填飼主姓名");
+  if (!/^09\d{8}$/.test(phone.replace(/\D/g,""))) return fail("電話格式錯誤（09 開頭 10 碼）");
+  if (!petName) return fail("請填寵物名");
+  if (!$("agree").checked) return fail("請勾選「已詳閱並同意」");
+  if (!hasSig) return fail("請簽名");
+
+  const btn = $("submit"); btn.disabled = true; btn.textContent = "送出中…";
+  const data = {
+    name, phone, petName,
+    ownerAddress: $("ownerAddress").value.trim(),
+    ownerIsSelf: getRadio("isSelf"), ownerRelation: $("ownerRelation").value.trim(),
+    emergencyName: $("emergencyName").value.trim(), emergencyPhone: $("emergencyPhone").value.trim(),
+    petSpecies: getRadio("species"), breed: $("breed").value.trim(),
+    petAge: $("petAge").value.trim(), petGender: getRadio("gender"), petNeuter: getRadio("neuter"),
+    chipNo: $("chipNo").value.trim(),
+    personality: getChecks("personality"), appearance: getRadio("appearance"), parasite: getRadio("parasite"),
+    medicalHistory: getChecks("medicalHistory"),
+    services: getChecks("services"), amount: $("amount").value.trim(), payMethod: getRadio("pay"),
+    vetDesignatedBy: getRadio("vetBy"), vetName: $("vetName").value.trim(), vetTel: $("vetTel").value.trim(), vetAddr: $("vetAddr").value.trim(),
+    signaturePng: canvas.toDataURL("image/png"),
+    agreedAt: new Date().toISOString(), submittedAt: new Date().toISOString(),
+    liffUserId, liffDisplayName, userAgent: navigator.userAgent,
+  };
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
+    const out = await res.json();
+    if (out.ok) { $("donePdf").href = out.pdfUrl; show("done"); window.scrollTo(0, 0); }
+    else { fail("送出失敗：" + (out.message || out.error || "未知錯誤")); btn.disabled = false; btn.textContent = "確認簽署並送出"; }
+  } catch (err) { fail("連線失敗，請稍後再試"); btn.disabled = false; btn.textContent = "確認簽署並送出"; }
+});
+</script>
+</body>
+</html>

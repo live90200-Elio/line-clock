@@ -123,7 +123,9 @@
         <label><input type="checkbox" value="腸炎">腸炎</label><label><input type="checkbox" value="血便">血便</label>
         <label><input type="checkbox" value="血尿">血尿</label><label><input type="checkbox" value="懷孕">懷孕</label>
         <label><input type="checkbox" value="傳染性疾病">傳染性疾病</label>
+        <label><input type="checkbox" value="其他" id="medOtherChk">其他</label>
       </div>
+      <input type="text" id="medicalOther" placeholder="其他病史請自行填寫（例：糖尿病、皮膚病、腫瘤、過敏…可多筆以、分隔）" style="margin-top:8px;">
     </div>
 
     <div class="card">
@@ -242,6 +244,14 @@ window.addEventListener("resize", () => setTimeout(resizeCanvas, 200));
 // ---- 工具：取勾選 / 取單選 ----
 const getChecks = (id) => Array.from($(id).querySelectorAll("input:checked")).map(el => el.value);
 const getRadio = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ""; };
+// 病史：勾選項 + 「其他」自填欄（自填有值就用自填取代「其他」字樣）
+const collectMedical = () => {
+  const arr = getChecks("medicalHistory").filter(v => v !== "其他");
+  const other = $("medicalOther").value.trim();
+  if (other) other.split(/[、,，]/).map(s => s.trim()).filter(Boolean).forEach(s => arr.push(s));
+  else if (getChecks("medicalHistory").includes("其他")) arr.push("其他");
+  return arr;
+};
 
 // ---- 送出 ----
 $("submit").addEventListener("click", async () => {
@@ -267,7 +277,7 @@ $("submit").addEventListener("click", async () => {
     petAge: $("petAge").value.trim(), petGender: getRadio("gender"), petNeuter: getRadio("neuter"),
     chipNo: $("chipNo").value.trim(),
     personality: getChecks("personality"), appearance: getRadio("appearance"), parasite: getRadio("parasite"),
-    medicalHistory: getChecks("medicalHistory"),
+    medicalHistory: collectMedical(),
     services: getChecks("services"), amount: $("amount").value.trim(), payMethod: getRadio("pay"),
     vetDesignatedBy: getRadio("vetBy"), vetName: $("vetName").value.trim(), vetTel: $("vetTel").value.trim(), vetAddr: $("vetAddr").value.trim(),
     signaturePng: canvas.toDataURL("image/png"),

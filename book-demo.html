@@ -15,11 +15,15 @@
   .card h2 { font-size:1rem; color:var(--brown); margin:0 0 12px; border-bottom:2px solid var(--line); padding-bottom:6px; }
   label { display:block; font-size:.88rem; color:#666; margin:10px 0 4px; }
   input[type=text], input[type=tel], input[type=date], select { width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:10px; font-size:1rem; background:#fff; color:#333; }
+  select:disabled { background:#f1ece3; color:#aaa; }
   .svc { display:flex; gap:10px; }
   .svc .opt { flex:1; border:2px solid var(--line); border-radius:12px; padding:14px 8px; text-align:center; cursor:pointer; transition:.15s; }
   .svc .opt.on { border-color:var(--brown); background:#fdf8f0; }
   .svc .opt .ic { font-size:1.6rem; }
   .svc .opt .nm { font-weight:700; color:var(--brown-deep); margin-top:2px; }
+  .daynote { display:none; font-size:.85rem; margin-top:8px; padding:9px 11px; border-radius:9px; }
+  .daynote.err { background:#fdecec; color:#c0392b; }
+  .daynote.ok { background:#eef7ee; color:#2e7d32; }
   .submit { width:100%; padding:15px; margin-top:8px; border:none; border-radius:12px; background:var(--brown); color:#fff; font-size:1.1rem; font-weight:700; }
   .submit:disabled { background:#ccc; }
   .msg { text-align:center; padding:14px; border-radius:10px; margin-top:12px; font-size:.92rem; display:none; }
@@ -52,6 +56,7 @@
       <label>日期 *</label><input type="date" id="date">
       <label>時段 *</label>
       <select id="time"></select>
+      <div class="daynote" id="dayNote"></div>
       <label>備註（選填）</label><input type="text" id="note" placeholder="例：怕剪指甲、要剃毛">
     </div>
 
@@ -74,6 +79,8 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxjHMj7QGzavs1UD33ObVqDM0KdSMDOp18p5L1ABH1thpu-zcQ8shY86b8Vzekqmt2o/exec";
 
 const $ = (id) => document.getElementById(id);
+const pad = (n) => String(n).padStart(2, "0");
+const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 let svc = "wash";
 
 // 服務選擇
@@ -84,27 +91,66 @@ document.querySelectorAll("#svc .opt").forEach(el => el.addEventListener("click"
 
 // 日期：預設明天、最小今天
 (function initDate() {
-  const pad = (n) => String(n).padStart(2, "0");
-  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   const today = new Date();
   const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
-  $("date").min = fmt(today);
-  $("date").value = fmt(tmr);
+  $("date").min = fmtDate(today);
+  $("date").value = fmtDate(tmr);
 })();
+$("date").addEventListener("change", refreshDay);
 
-// 時段：09:00～19:30，每 30 分一格
-(function initTimes() {
-  const sel = $("time");
+function setNote(text, cls) {
+  const n = $("dayNote");
+  if (!text) { n.style.display = "none"; return; }
+  n.textContent = text;
+  n.className = "daynote " + cls;
+  n.style.display = "block";
+}
+
+// 問後端：這天公休嗎？哪些時段被約走？→ 重建時段下拉
+async function refreshDay() {
+  const date = $("date").value;
+  const sel = $("time"), btn = $("submit");
+  setNote("", "");
+  sel.innerHTML = '<option>查詢可預約時段…</option>';
+  sel.disabled = true; btn.disabled = true;
+  if (!date) { setNote("請先選日期", "err"); return; }
+
+  let out;
+  try {
+    const res = await fetch(API_URL + "?day=" + encodeURIComponent(date));
+    out = await res.json();
+  } catch (err) {
+    sel.innerHTML = ""; setNote("讀取可預約時段失敗，請稍後再試", "err"); return;
+  }
+
+  sel.innerHTML = "";
+  if (!out || !out.ok) { setNote((out && out.message) || "讀取失敗", "err"); return; }
+  if (out.closed) { setNote("🚫 " + (out.closedReason || "本日不開放預約"), "err"); return; }
+
+  const taken = new Set(out.takenTimes || []);
+  const isToday = date === fmtDate(new Date());
+  const now = Date.now();
+  let count = 0;
   for (let h = 9; h < 20; h++) {
     for (const m of ["00", "30"]) {
-      const v = String(h).padStart(2, "0") + ":" + m;
+      const v = pad(h) + ":" + m;
+      if (taken.has(v)) continue;                                  // 已被約走
+      if (isToday) {                                               // 今天：跳過已過去的時段
+        const slot = new Date(); slot.setHours(h, Number(m), 0, 0);
+        if (slot.getTime() <= now) continue;
+      }
       const o = document.createElement("option");
       o.value = v; o.textContent = v;
       sel.appendChild(o);
+      count++;
     }
   }
-  sel.value = "14:00";
-})();
+  if (count === 0) { setNote("😢 這天已約滿，請換一天", "err"); return; }
+  sel.value = [...sel.options].some(o => o.value === "14:00") ? "14:00" : sel.options[0].value;
+  sel.disabled = false; btn.disabled = false;
+  if (taken.size > 0) setNote("部分時段已被預約（已自動隱藏），請選還能約的時段", "ok");
+}
+refreshDay();
 
 // 送出
 $("submit").addEventListener("click", async () => {
@@ -116,6 +162,7 @@ $("submit").addEventListener("click", async () => {
   if (!petName) return fail("請填寵物名");
   if (!/^09\d{8}$/.test(phone.replace(/\D/g, ""))) return fail("電話格式錯誤（09 開頭 10 碼）");
   if (!$("date").value) return fail("請選日期");
+  if (!$("time").value) return fail("請選時段");
 
   const btn = $("submit"); btn.disabled = true; btn.textContent = "預約中…";
   const data = {
@@ -134,7 +181,8 @@ $("submit").addEventListener("click", async () => {
       window.scrollTo(0, 0);
     } else {
       fail("預約失敗：" + (out.message || "未知錯誤"));
-      btn.disabled = false; btn.textContent = "確認預約";
+      btn.textContent = "確認預約";
+      refreshDay();   // 可能是時段剛被約走 → 刷新可選時段
     }
   } catch (err) {
     fail("連線失敗，請稍後再試");

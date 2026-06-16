@@ -43,9 +43,28 @@
   .center h2 { color:var(--brown-deep); border:none; }
   .center a { color:var(--brown); }
   .loading { text-align:center; color:#998; padding:60px 0; }
+  /* 填單前提醒 modal */
+  .pre-modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:24px; z-index:9999; }
+  .pre-modal .box { background:#fff; border-radius:18px; padding:28px 22px; max-width:340px; width:100%; text-align:center; box-shadow:0 10px 36px rgba(0,0,0,.28); }
+  .pre-modal .ic { font-size:3rem; line-height:1; }
+  .pre-modal h3 { color:var(--brown-deep); font-size:1.22rem; margin:10px 0 12px; }
+  .pre-modal p { color:#444; font-size:1.02rem; line-height:1.85; margin:0 0 22px; }
+  .pre-modal p strong { color:#c0392b; }
+  .pre-modal button { width:100%; padding:14px; border:none; border-radius:12px; background:var(--brown); color:#fff; font-size:1.05rem; font-weight:700; }
 </style>
 </head>
 <body>
+
+<!-- 填單前提醒（一進頁面就跳，按了才開始填） -->
+<div class="pre-modal" id="preModal">
+  <div class="box">
+    <div class="ic">📅</div>
+    <h3>填單前小提醒</h3>
+    <p>請先與美容師<strong>確定好預約時間</strong>後，<br>再進行填單！</p>
+    <button id="preModalOk">我知道了，開始填單</button>
+  </div>
+</div>
+
 <div class="wrap">
 
   <!-- 載入中 -->
@@ -195,6 +214,9 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx99cUYpq2gC5KjndYNQr_c
 
 const $ = (id) => document.getElementById(id);
 let liffUserId = "", liffDisplayName = "";
+
+// 填單前提醒：按「我知道了」才關閉
+$("preModalOk").addEventListener("click", () => { $("preModal").style.display = "none"; });
 
 // ---- 啟動：LIFF 登入 → 查是否簽過 → 載入契約全文 ----
 (async function init() {

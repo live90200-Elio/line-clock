@@ -4,90 +4,111 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>預約小幫手（示範）— 小事系統 Demo</title>
-<meta name="theme-color" content="#0f1724">
+<meta name="theme-color" content="#f5efe5">
 <style>
+  :root {
+    --brown:#8a5a2b; --brown-deep:#6e4620; --brown-soft:#b08a5d;
+    --bg:#f5efe5; --card:#fff; --line:#ece2d2;
+    --ink:#3a332c; --ink-soft:#8a8073; --ink-faint:#b3a896;
+    --ok:#2e7d32; --ease: cubic-bezier(.32,.72,0,1);
+    --shadow:0 1px 2px rgba(110,70,32,.04), 0 10px 26px -14px rgba(110,70,32,.22);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
   body {
     font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
-    background: #0f1724; color: #e8ecf5; line-height: 1.55;
+    background: radial-gradient(135% 75% at 50% -12%, #fdfaf4 0%, #f6f0e6 55%, #f1e8d9 100%) fixed;
+    color: var(--ink); line-height: 1.55; min-height: 100dvh;
   }
   .app { max-width: 960px; margin: 0 auto; padding: 16px; }
 
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .anim { animation: rise .55s var(--ease) backwards; }
+  .d1 { animation-delay: .05s; } .d2 { animation-delay: .12s; } .d3 { animation-delay: .19s; } .d4 { animation-delay: .26s; }
+  @media (prefers-reduced-motion: reduce) { .anim { animation: none; } }
+
   .demo-banner {
     max-width: 960px; margin: 0 auto; padding: 9px 16px;
-    background: linear-gradient(135deg, rgba(122,200,232,.16), rgba(122,200,232,.06));
-    border-bottom: 1px solid rgba(122,200,232,.3);
-    font-size: 12.5px; color: #aee2f6; text-align: center; letter-spacing: .3px;
+    background: linear-gradient(135deg, rgba(138,90,43,.12), rgba(138,90,43,.04));
+    border-bottom: 1px solid rgba(138,90,43,.2);
+    font-size: 12.5px; color: var(--brown); text-align: center; letter-spacing: .3px;
   }
-  .demo-banner b { color: #d6f1fb; }
+  .demo-banner b { color: var(--brown-deep); }
 
-  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 4px 16px; flex-wrap: wrap; }
-  h1.title { font-size: 22px; color: #7ac8e8; }
-  .date-label { font-size: 14px; color: #e8ecf5; margin-top: 4px; }
-  .date-label .sub { color: #8a9aad; font-size: 12px; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 10px 4px 16px; flex-wrap: wrap; }
+  h1.title { font-size: 22px; color: var(--brown-deep); font-weight: 800; letter-spacing: .3px; }
+  .date-label { font-size: 14px; color: var(--ink); margin-top: 4px; }
+  .date-label .sub { color: var(--ink-soft); font-size: 12px; }
   .header-actions { display: flex; gap: 8px; }
   .icon-btn {
-    background: #1a2332; border: 1px solid #2d3b52; color: #e8ecf5;
-    padding: 8px 12px; font-size: 14px; border-radius: 8px; cursor: pointer;
+    background: var(--card); border: 1px solid var(--line); color: var(--ink);
+    padding: 8px 12px; font-size: 14px; border-radius: 11px; cursor: pointer;
+    box-shadow: var(--shadow); transition: transform .18s var(--ease), background .18s;
   }
-  .icon-btn:hover { background: #24324a; }
+  .icon-btn:active { background: #fdf7ee; transform: scale(.92); }
   .icon-btn:disabled { opacity: .5; cursor: wait; }
   .icon-btn.loading .spin { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  section { margin-bottom: 24px; }
-  h2 { font-size: 16px; color: #e8ecf5; margin-bottom: 12px; padding-left: 8px; border-left: 3px solid #7ac8e8; }
-  h2.warn { border-left-color: #ff9a5c; }
+  section { margin-bottom: 22px; }
+  h2 { font-size: 15px; color: var(--brown-deep); margin-bottom: 12px; padding-left: 10px;
+    border-left: 3px solid var(--brown); font-weight: 800; letter-spacing: .5px; }
+  h2.warn { border-left-color: #d98a3d; }
 
-  .card { background: #1a2332; border-radius: 12px; padding: 16px; border: 1px solid #2d3b52; }
+  .card { background: var(--card); border-radius: 18px; padding: 18px; border: 1px solid var(--line); box-shadow: var(--shadow); }
 
   .staff-box {
-    background: #0f1724; border: 1px solid #2d3b52; border-radius: 8px;
-    padding: 12px; font-family: -apple-system, "SF Mono", "Menlo", monospace;
-    font-size: 14px; color: #e8ecf5; white-space: pre-wrap; word-break: break-word;
+    background: #faf6ee; border: 1px solid var(--line); border-radius: 12px;
+    padding: 13px 14px; font-family: -apple-system, "SF Mono", "Menlo", monospace;
+    font-size: 14px; color: var(--ink); white-space: pre-wrap; word-break: break-word;
     margin-bottom: 12px; min-height: 60px;
   }
   .primary-btn {
-    background: #7ac8e8; color: #0f1724; border: none; border-radius: 8px;
-    padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%;
+    background: linear-gradient(180deg, #96622f, #7c4f24); color: #fff; border: none; border-radius: 13px;
+    padding: 13px 16px; font-size: 14.5px; font-weight: 700; letter-spacing: 1px; cursor: pointer; width: 100%;
+    box-shadow: 0 10px 22px -10px rgba(124,79,36,.7);
+    transition: transform .18s var(--ease), box-shadow .18s, opacity .18s;
   }
-  .primary-btn:hover { background: #9bd6ee; }
-  .primary-btn.copied { background: #a8d8b9; }
+  .primary-btn:active { transform: scale(.985); }
+  .primary-btn:disabled { background: #d8cebf; box-shadow: none; cursor: not-allowed; }
+  .primary-btn.copied { background: linear-gradient(180deg, #5fb87c, #3f9a5f); }
 
   .reminder-list { display: flex; flex-direction: column; gap: 12px; }
-  .reminder-card { background: #1a2332; border-radius: 12px; padding: 14px; border: 1px solid #2d3b52; }
+  .reminder-card { background: var(--card); border-radius: 18px; padding: 16px; border: 1px solid var(--line); box-shadow: var(--shadow); }
   .reminder-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-  .reminder-head .owner { font-size: 16px; font-weight: 700; color: #e8d07a; }
-  .reminder-head .phone { font-size: 13px; color: #8a9aad; font-variant-numeric: tabular-nums; }
-  .reminder-head .phone a { color: #8a9aad; text-decoration: none; }
-  .reminder-head .phone a:hover { color: #7ac8e8; }
-  .reminder-sub { font-size: 13px; color: #8a9aad; margin-bottom: 10px; }
-  .reminder-sub .cut { color: #e8d07a; }
+  .reminder-head .owner { font-size: 16px; font-weight: 800; color: var(--brown-deep); letter-spacing: .3px; }
+  .reminder-head .phone { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .reminder-head .phone a { color: var(--ink-soft); text-decoration: none; transition: color .15s; }
+  .reminder-head .phone a:active { color: var(--brown); }
+  .reminder-sub { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+  .reminder-sub .cut { color: var(--brown); font-weight: 700; }
   .reminder-msg {
-    background: #0f1724; border: 1px solid #2d3b52; border-radius: 8px;
-    padding: 10px 12px; font-size: 14px; white-space: pre-wrap; word-break: break-word;
-    margin-bottom: 10px; color: #e8ecf5;
+    background: #faf6ee; border: 1px solid var(--line); border-radius: 12px;
+    padding: 11px 13px; font-size: 14px; white-space: pre-wrap; word-break: break-word;
+    margin-bottom: 10px; color: var(--ink); line-height: 1.7;
   }
-  .copy-btn { background: #24324a; color: #e8ecf5; border: 1px solid #2d3b52; border-radius: 8px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
-  .copy-btn:hover { background: #2d3b52; }
-  .copy-btn.copied { background: #2d5a3f; border-color: #3d7a56; color: #a8d8b9; }
+  .copy-btn { background: #fff; color: var(--brown-deep); border: 1.5px solid var(--line); border-radius: 11px;
+    padding: 9px 15px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: transform .18s var(--ease), background .18s, border-color .18s, color .18s; }
+  .copy-btn:active { transform: scale(.96); }
+  .copy-btn.copied { background: #edf6ee; border-color: #aedab9; color: var(--ok); }
 
-  .missing-card { background: #2a1f15; border: 1px solid #5a3f28; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; font-size: 14px; color: #ffcfa0; }
-  .missing-card strong { color: #ffb366; }
-  .missing-card .reason { font-size: 12px; color: #c99874; margin-top: 2px; }
+  .missing-card { background: #fdf3e6; border: 1px solid #f0d9b8; border-radius: 14px; padding: 13px 15px; margin-bottom: 10px; font-size: 14px; color: #9a6b32; }
+  .missing-card strong { color: #b9772f; }
+  .missing-card .reason { font-size: 12px; color: #b08a5d; margin-top: 3px; }
 
-  .empty-state { text-align: center; padding: 30px; color: #6a7a8d; font-size: 14px; }
+  .empty-state { text-align: center; padding: 30px; color: var(--ink-faint); font-size: 14px; }
 
   .cta {
     display:block; text-align:center; text-decoration:none;
-    margin: 4px 0 8px; padding: 14px;
-    background:#7ac8e8; color:#0f1724; font-weight:800; letter-spacing:1px;
-    border-radius:12px;
+    margin: 6px 0 8px; padding: 15px;
+    background: linear-gradient(180deg, #96622f, #7c4f24); color:#fff; font-weight:800; letter-spacing:1px;
+    border-radius:14px; box-shadow: 0 12px 26px -12px rgba(124,79,36,.7);
+    transition: transform .18s var(--ease);
   }
-  .cta:active { transform: translateY(1px); }
+  .cta:active { transform: scale(.985); }
 
-  footer { padding: 20px 4px; font-size: 11px; color: #4a5a6d; text-align: center; }
+  footer { padding: 20px 4px 26px; font-size: 11px; color: var(--ink-faint); text-align: center; }
 </style>
 </head>
 <body>
@@ -95,7 +116,7 @@
 <div class="demo-banner">🧪 這是 <b>示範預約小幫手</b>，內容皆為虛構假資料 ·「毛孩之家（示範店）」</div>
 
 <div id="dashboard" class="app">
-  <header>
+  <header class="anim">
     <div>
       <h1 class="title">📅 預約小幫手</h1>
       <div class="date-label" id="dateLabel">載入中…</div>
@@ -107,7 +128,7 @@
     </div>
   </header>
 
-  <section>
+  <section class="anim d1">
     <h2>📋 員工清單（貼到員工群組）</h2>
     <div class="card">
       <div class="staff-box" id="staffContent">載入中…</div>
@@ -115,19 +136,19 @@
     </div>
   </section>
 
-  <section id="remindersSection">
+  <section id="remindersSection" class="anim d2">
     <h2>💬 客戶提醒草稿（逐筆貼給客戶）</h2>
     <div class="reminder-list" id="remindersList">
       <div class="empty-state">載入中…</div>
     </div>
   </section>
 
-  <section id="missingSection" hidden>
+  <section id="missingSection" class="anim d3" hidden>
     <h2 class="warn">⚠️ 需要手動通知（查無主人）</h2>
     <div id="missingList"></div>
   </section>
 
-  <a class="cta" href="intro.html">想幫自己的店裝一套？看完整介紹 →</a>
+  <a class="cta anim d4" href="intro.html">想幫自己的店裝一套？看完整介紹 →</a>
 
   <footer>🧪 示範用假資料 · 正式版每天早上自動整理隔天預約，複製貼上兩次就搞定</footer>
 </div>

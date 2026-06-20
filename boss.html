@@ -29,6 +29,13 @@
   }
   .app { max-width: 960px; margin: 0 auto; padding: 14px 16px 8px; }
 
+  /* 進場動畫 + 互動曲線 */
+  :root { --ease: cubic-bezier(.32,.72,0,1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .anim { animation: rise .55s var(--ease) backwards; }
+  .d1 { animation-delay: .05s; } .d2 { animation-delay: .12s; } .d3 { animation-delay: .19s; } .d4 { animation-delay: .26s; } .d5 { animation-delay: .33s; }
+  @media (prefers-reduced-motion: reduce) { .anim { animation: none; opacity: 1; } }
+
   /* ===== 登入畫面 ===== */
   .login {
     min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
@@ -57,8 +64,9 @@
     background: linear-gradient(135deg, #f0db8e, #d4a547); color: #1a1408;
     border: none; border-radius: 12px; cursor: pointer;
     box-shadow: 0 6px 18px rgba(212,165,71,.35);
+    transition: transform .18s var(--ease), box-shadow .18s var(--ease);
   }
-  .login button:active { transform: translateY(1px); }
+  .login button:active { transform: scale(.98); }
   .login button:disabled { opacity: .5; cursor: wait; }
   .login .error { color: #ff8585; font-size: 13px; margin-top: 10px; min-height: 18px; }
 
@@ -78,8 +86,9 @@
     background: rgba(36,48,72,.7); border: 1px solid #31415e; color: #e8ecf5;
     width: 38px; height: 38px; font-size: 15px; border-radius: 11px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
+    transition: transform .18s var(--ease), background .18s;
   }
-  .icon-btn:active { background: #2c3a57; }
+  .icon-btn:active { background: #2c3a57; transform: scale(.92); }
   .icon-btn:disabled { opacity: .45; cursor: wait; }
   .icon-btn .spin { display: inline-block; }
   .icon-btn.loading .spin { animation: spin 1s linear infinite; }
@@ -95,7 +104,9 @@
     flex: 1; padding: 9px 4px; font-size: 13.5px;
     background: transparent; color: #8a9aad; border: none;
     border-radius: 9px; cursor: pointer; white-space: nowrap;
+    transition: transform .18s var(--ease), background .25s var(--ease), color .25s var(--ease);
   }
+  .period-tabs button:active { transform: scale(.95); }
   .period-tabs button.active {
     background: linear-gradient(135deg, #f0db8e, #d4a547);
     color: #1a1408; font-weight: 700;
@@ -191,7 +202,7 @@
 
 <!-- ===== 主儀表板 ===== -->
 <div id="dashboard" class="app" hidden>
-  <header>
+  <header class="anim">
     <div class="brand">
       <div class="logo">🐾</div>
       <div>
@@ -208,7 +219,7 @@
     </div>
   </header>
 
-  <div class="period-tabs">
+  <div class="period-tabs anim d1">
     <button data-period="current_month" class="active">本月</button>
     <button data-period="last_month">上月</button>
     <button data-period="current_year">本年</button>
@@ -217,7 +228,7 @@
 
   <div id="errorBox"></div>
 
-  <div class="kpis">
+  <div class="kpis anim d2">
     <div class="kpi hero">
       <div class="kpi-label">💰 總營收</div>
       <div class="kpi-value" id="kpiRevenue">—</div>
@@ -232,17 +243,17 @@
     </div>
   </div>
 
-  <section>
+  <section class="anim d3">
     <h2>美容師業績</h2>
     <div class="card" id="byGroomer"><div class="empty-state">載入中…</div></div>
   </section>
 
-  <section>
+  <section class="anim d4">
     <h2>付款方式</h2>
     <div class="card" id="byPayment"><div class="empty-state">載入中…</div></div>
   </section>
 
-  <section>
+  <section class="anim d5">
     <h2>最近交易</h2>
     <div class="card" id="recent"><div class="empty-state">載入中…</div></div>
   </section>

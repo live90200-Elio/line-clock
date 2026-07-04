@@ -270,6 +270,22 @@
 const BOSS_API_URL = "https://script.google.com/macros/s/AKfycbxoap78ObcCCUJ7m3OROMiey3j86QtlZOIOFc-RIiG_dCIGppLtSfH1ikCTFtD_njEL/exec";
 
 const STORAGE_KEY = "pet-grooming-boss-key";
+const KEY_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 密鑰閒置 30 天自動失效（共用裝置防呆）
+
+function loadStoredKey() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return "";
+  try {
+    const obj = JSON.parse(raw);
+    if (obj && obj.k && obj.exp > Date.now()) return obj.k;
+  } catch (e) {} // 舊版存純字串：視為過期，重新登入一次
+  localStorage.removeItem(STORAGE_KEY);
+  return "";
+}
+
+function saveStoredKey(k) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ k: k, exp: Date.now() + KEY_TTL_MS }));
+}
 
 // ===== DOM =====
 const loginScreen = document.getElementById("loginScreen");
@@ -286,11 +302,12 @@ const periodTabs = document.querySelectorAll(".period-tabs button");
 
 // ===== 狀態 =====
 let currentPeriod = "current_month";
-let currentKey = localStorage.getItem(STORAGE_KEY) || "";
+let currentKey = loadStoredKey();
 let currentData = null; // 最新一次 fetch 到的資料（給匯出 CSV 用）
 
 // ===== 啟動 =====
 if (currentKey) {
+  saveStoredKey(currentKey); // 有在用就滑動延長效期
   enterDashboard();
 } else {
   showLogin();
@@ -316,7 +333,7 @@ async function attemptLogin() {
       return;
     }
     currentKey = k;
-    localStorage.setItem(STORAGE_KEY, k);
+    saveStoredKey(k);
     enterDashboard(res);
   } catch (err) {
     loginError.textContent = "連線失敗：" + err.message;

@@ -225,6 +225,22 @@
 const APPT_API_URL = "https://script.google.com/macros/s/AKfycbwhpwRwRpWdhk4KhdLM-P5_8yCRo7ukL0UktWvZAu16OyqJhC-XMdKzfqPN-UqY_z9wPQ/exec";
 
 const STORAGE_KEY = "appointment-helper-key";
+const KEY_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 密鑰閒置 30 天自動失效（共用裝置防呆）
+
+function loadStoredKey() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return "";
+  try {
+    const obj = JSON.parse(raw);
+    if (obj && obj.k && obj.exp > Date.now()) return obj.k;
+  } catch (e) {} // 舊版存純字串：視為過期，重新登入一次
+  localStorage.removeItem(STORAGE_KEY);
+  return "";
+}
+
+function saveStoredKey(k) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ k: k, exp: Date.now() + KEY_TTL_MS }));
+}
 
 // ===== DOM =====
 const loginScreen = document.getElementById("loginScreen");
@@ -243,12 +259,16 @@ const missingSection = document.getElementById("missingSection");
 const missingList = document.getElementById("missingList");
 
 // ===== 狀態 =====
-let currentKey = localStorage.getItem(STORAGE_KEY) || "";
+let currentKey = loadStoredKey();
 let currentData = null;
 
 // ===== 啟動 =====
-if (currentKey) enterDashboard();
-else showLogin();
+if (currentKey) {
+  saveStoredKey(currentKey); // 有在用就滑動延長效期
+  enterDashboard();
+} else {
+  showLogin();
+}
 
 // ===== 登入 =====
 function showLogin() {
@@ -270,7 +290,7 @@ async function attemptLogin() {
       return;
     }
     currentKey = k;
-    localStorage.setItem(STORAGE_KEY, k);
+    saveStoredKey(k);
     enterDashboard(res);
   } catch (err) {
     loginError.textContent = "連線失敗：" + err.message;

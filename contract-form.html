@@ -16,7 +16,7 @@
   label.f { display:block; font-size:.85rem; color:#666; margin:10px 0 4px; }
   label.f .opt { color:#bba; font-weight:400; font-size:.78rem; }
   label.f .req { color:#c0392b; }
-  input[type=text], input[type=tel], input[type=number] { width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:10px; font-size:1rem; }
+  input[type=text], input[type=tel], input[type=number], input[type=email] { width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:10px; font-size:1rem; }
   .row2 { display:flex; gap:8px; } .row2 > div { flex:1; }
   .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:2px; }
   .chips label { display:inline-flex; align-items:center; gap:4px; border:1.5px solid var(--line); border-radius:20px; padding:6px 11px; font-size:.84rem; color:#555; cursor:pointer; }
@@ -79,6 +79,7 @@
       <h2>① 飼主資料</h2>
       <label class="f">姓名 <span class="req">*</span></label><input type="text" id="name" placeholder="您的姓名">
       <label class="f">聯絡電話 <span class="req">*</span></label><input type="tel" id="phone" placeholder="09xxxxxxxx">
+      <label class="f">Email <span class="opt">選填・填了會把契約 PDF 副本寄給您</span></label><input type="email" id="email" placeholder="（選填）you@example.com">
       <label class="f">通訊地址 <span class="opt">選填</span></label><input type="text" id="ownerAddress" placeholder="（選填）">
       <div class="row2">
         <div><label class="f">是否飼主本人 <span class="opt">選填</span></label>
@@ -200,7 +201,8 @@
       <div class="big">✅</div>
       <h2>簽署完成！</h2>
       <p>契約 PDF 已自動存檔，店家也收到通知。<br>感謝您的信任 🙌</p>
-      <p><a id="donePdf" href="#" target="_blank">＞ 開啟契約 PDF</a></p>
+      <p id="doneMail" style="display:none;color:var(--brown-deep);font-weight:600;"></p>
+      <p id="doneNoMail" style="display:none;font-size:.88rem;color:#998;">如需契約副本，下次填單時填寫 Email，<br>或直接向店家索取。</p>
     </div>
   </div>
 
@@ -283,15 +285,17 @@ $("submit").addEventListener("click", async () => {
   const name = $("name").value.trim();
   const phone = $("phone").value.trim();
   const petName = $("petName").value.trim();
+  const email = $("email").value.trim();
   if (!name) return fail("請填飼主姓名");
   if (!/^09\d{8}$/.test(phone.replace(/\D/g,""))) return fail("電話格式錯誤（09 開頭 10 碼）");
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Email 格式錯誤（不想收契約副本可留空）");
   if (!petName) return fail("請填寵物名");
   if (!$("agree").checked) return fail("請勾選「已詳閱並同意」");
   if (!hasSig) return fail("請簽名");
 
   const btn = $("submit"); btn.disabled = true; btn.textContent = "送出中…";
   const data = {
-    name, phone, petName,
+    name, phone, petName, email,
     ownerAddress: $("ownerAddress").value.trim(),
     ownerIsSelf: getRadio("isSelf"), ownerRelation: $("ownerRelation").value.trim(),
     emergencyName: $("emergencyName").value.trim(), emergencyPhone: $("emergencyPhone").value.trim(),
@@ -310,7 +314,12 @@ $("submit").addEventListener("click", async () => {
   try {
     const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
     const out = await res.json();
-    if (out.ok) { $("donePdf").href = out.pdfUrl; show("done"); window.scrollTo(0, 0); }
+    if (out.ok) {
+      // Drive 原檔只有店家帳號開得了（2026-07-04 實測），故不再給客戶點不開的 PDF 連結；副本走 email
+      if (out.emailed) { $("doneMail").textContent = "📧 契約副本已寄至 " + email; $("doneMail").style.display = "block"; }
+      else { $("doneNoMail").style.display = "block"; }
+      show("done"); window.scrollTo(0, 0);
+    }
     else { fail("送出失敗：" + (out.message || out.error || "未知錯誤")); btn.disabled = false; btn.textContent = "確認簽署並送出"; }
   } catch (err) { fail("連線失敗，請稍後再試"); btn.disabled = false; btn.textContent = "確認簽署並送出"; }
 });

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>線上預約 · 洗毛這件小事</title>
+<style>
+  :root {
+    --brown:#8a5a2b; --brown-deep:#6e4620; --brown-soft:#b08a5d;
+    --bg:#f5efe5; --card:#fff; --line:#ece2d2;
+    --ink:#3a332c; --ink-soft:#8a8073; --ink-faint:#b3a896;
+    --ok-bg:#edf6ee; --ok:#2e7d32; --err-bg:#fdecec; --err:#c0392b;
+    --ease:cubic-bezier(.32,.72,0,1);
+    --shadow:0 1px 2px rgba(110,70,32,.04), 0 10px 26px -14px rgba(110,70,32,.22);
+    --ring:0 0 0 3px rgba(138,90,43,.16);
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; }
+  body {
+    font-family:"Microsoft JhengHei","Noto Sans CJK TC",system-ui,sans-serif;
+    color:var(--ink); line-height:1.6; min-height:100dvh;
+    background:radial-gradient(135% 75% at 50% -12%, #fdfaf4 0%, #f6f0e6 55%, #f1e8d9 100%) fixed;
+  }
+  .wrap { max-width:520px; margin:0 auto; padding:22px 16px 64px; }
+
+  /* ── 填單前提醒 modal ── */
+  .pre-modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; padding:24px; z-index:9999; }
+  .pre-modal .box { background:#fff; border-radius:18px; padding:28px 22px; max-width:340px; width:100%; text-align:center; box-shadow:0 10px 36px rgba(0,0,0,.28); }
+  .pre-modal .ic { font-size:3rem; line-height:1; }
+  .pre-modal h3 { color:var(--brown-deep); font-size:1.22rem; margin:10px 0 12px; }
+  .pre-modal p { color:#444; font-size:1.02rem; line-height:1.85; margin:0 0 22px; }
+  .pre-modal p strong { color:#c0392b; }
+  .pre-modal button { width:100%; padding:14px; border:none; border-radius:12px; background:var(--brown); color:#fff; font-size:1.05rem; font-weight:700; }
+
+  /* ── LIFF 錯誤頁 ── */
+  .liff-err { text-align:center; padding:60px 20px; color:var(--ink-soft); }
+  .liff-err .ic { font-size:2.6rem; margin-bottom:14px; }
+  .liff-err h3 { color:var(--brown-deep); margin:0 0 8px; }
+
+  /* ── 標題 ── */
+  .head { text-align:center; margin:6px 0 22px; }
+  .eyebrow {
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--line); background:rgba(255,255,255,.6);
+    border-radius:999px; padding:5px 13px;
+    font-size:.7rem; font-weight:700; letter-spacing:.2em;
+    color:var(--brown); text-transform:uppercase;
+  }
+  h1 { font-size:1.62rem; letter-spacing:.01em; color:var(--brown-deep); margin:14px 0 6px; font-weight:800; }
+  .sub { color:var(--ink-soft); font-size:.86rem; margin:0; }
+
+  /* ── 卡片 ── */
+  .card {
+    position:relative; background:var(--card); border:1px solid var(--line);
+    border-radius:20px; padding:20px 18px; margin-bottom:15px; box-shadow:var(--shadow);
+  }
+  .card::before { content:""; position:absolute; inset:0; border-radius:inherit;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75); pointer-events:none; }
+  .card h2 { display:flex; align-items:center; gap:10px; font-size:1rem; font-weight:800;
+    color:var(--brown-deep); margin:0 0 16px; }
+  .step { display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:26px; border-radius:50%; background:var(--brown); color:#fff;
+    font-size:.82rem; font-weight:800; flex:none; box-shadow:0 3px 7px rgba(138,90,43,.35); }
+
+  /* ── 進場動畫 ── */
+  @keyframes rise { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+  .anim { opacity:0; animation:rise .6s var(--ease) forwards; }
+  .d1 { animation-delay:.06s; } .d2 { animation-delay:.14s; } .d3 { animation-delay:.22s; }
+  @media (prefers-reduced-motion:reduce) { .anim { animation:none; opacity:1; } }
+
+  /* ── 表單元件 ── */
+  label { display:block; font-size:.82rem; font-weight:600; color:var(--ink-soft);
+    margin:14px 0 6px; letter-spacing:.02em; }
+  input[type=text], input[type=tel], input[type=date] {
+    width:100%; padding:13px 14px; border:1.5px solid var(--line); border-radius:12px;
+    font-size:1rem; background:#fffdfa; color:var(--ink); font-family:inherit;
+    transition:border-color .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  input::placeholder { color:var(--ink-faint); }
+  input:focus { outline:none; border-color:var(--brown-soft); box-shadow:var(--ring); }
+
+  /* ── 服務選擇 ── */
+  .svc { display:flex; gap:12px; }
+  .svc .opt { position:relative; flex:1; border:2px solid var(--line); border-radius:16px;
+    padding:16px 8px; text-align:center; cursor:pointer; background:#fffdfa;
+    transition:transform .25s var(--ease), border-color .2s, background .2s, box-shadow .25s var(--ease); }
+  .svc .opt:active { transform:scale(.97); }
+  .svc .opt.on { border-color:var(--brown); background:#fdf7ee; box-shadow:0 8px 20px -10px rgba(138,90,43,.55); }
+  .svc .opt .ic { font-size:1.9rem; line-height:1; }
+  .svc .opt .nm { font-weight:800; color:var(--brown-deep); margin-top:6px; font-size:.95rem; }
+  .svc .opt .chk { position:absolute; top:9px; right:9px; width:18px; height:18px; border-radius:50%;
+    background:var(--brown); color:#fff; font-size:.7rem; display:flex; align-items:center; justify-content:center;
+    opacity:0; transform:scale(.4); transition:.25s var(--ease); }
+  .svc .opt.on .chk { opacity:1; transform:none; }
+
+  /* ── 時段網格 ── */
+  .slots { display:grid; grid-template-columns:repeat(auto-fill, minmax(76px,1fr)); gap:9px; margin-top:4px; }
+  .slot { font-variant-numeric:tabular-nums; font-size:.95rem; font-weight:700; font-family:inherit;
+    padding:11px 4px; border:1.5px solid var(--line); border-radius:12px; background:#fffdfa;
+    color:var(--brown-deep); cursor:pointer; text-align:center;
+    transition:transform .2s var(--ease), background .2s, border-color .2s, color .2s; }
+  .slot:active { transform:scale(.94); }
+  .slot.on { background:var(--brown); border-color:var(--brown); color:#fff;
+    box-shadow:0 8px 18px -7px rgba(138,90,43,.6); }
+  .slot:disabled { background:#f2ece2; border-color:transparent; color:var(--ink-faint);
+    cursor:not-allowed; text-decoration:line-through; opacity:.75; }
+  .slot.sk { color:transparent; border-color:transparent; cursor:default;
+    background:linear-gradient(100deg,#efe7da 30%,#f8f3ea 50%,#efe7da 70%); background-size:200% 100%;
+    animation:sh 1.1s linear infinite; }
+  @keyframes sh { to { background-position:-200% 0; } }
+
+  .daynote { display:none; font-size:.84rem; font-weight:600; margin-top:12px; padding:11px 13px; border-radius:11px; }
+  .daynote.err { background:var(--err-bg); color:var(--err); }
+  .daynote.ok { background:var(--ok-bg); color:var(--ok); }
+
+  /* ── 送出 ── */
+  .submit { width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:16px; margin-top:10px; border:none; border-radius:16px; cursor:pointer;
+    background:linear-gradient(180deg,#96622f,#7c4f24); color:#fff; font-size:1.08rem; font-weight:800; font-family:inherit;
+    box-shadow:0 12px 26px -12px rgba(124,79,36,.75);
+    transition:transform .2s var(--ease), box-shadow .2s, opacity .2s; }
+  .submit:active { transform:scale(.98); }
+  .submit .arr { width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,.18);
+    display:flex; align-items:center; justify-content:center; font-size:1rem; transition:transform .25s var(--ease); }
+  .submit:active .arr { transform:translateX(3px) scale(1.06); }
+  .submit:disabled { background:#d8cebf; color:#fff; box-shadow:none; cursor:not-allowed; }
+  .submit:disabled .arr { display:none; }
+
+  .msg { text-align:center; padding:14px; border-radius:12px; margin-top:14px; font-size:.92rem; font-weight:600; display:none; }
+  .msg.err { background:var(--err-bg); color:var(--err); display:block; }
+
+  /* ── 完成頁 ── */
+  .done { text-align:center; padding:40px 18px; animation:rise .55s var(--ease) both; }
+  .done .check { width:84px; height:84px; border-radius:50%; margin:0 auto 18px;
+    background:linear-gradient(180deg,#e9f6ea,#d6efd8); display:flex; align-items:center; justify-content:center;
+    font-size:2.6rem; color:var(--ok); animation:pop .5s var(--ease) .12s both;
+    box-shadow:0 12px 32px -14px rgba(46,125,50,.55); }
+  @keyframes pop { 0% { transform:scale(.4); opacity:0; } 60% { transform:scale(1.08); } 100% { transform:scale(1); opacity:1; } }
+  .done h2 { color:var(--brown-deep); font-size:1.42rem; margin:0 0 6px; font-weight:800; }
+  .done .lead { color:var(--ink-soft); font-size:.9rem; margin:0 0 20px; }
+  .done .info { background:#fffdfa; border:1px solid var(--line); border-radius:16px; padding:6px 18px;
+    text-align:left; box-shadow:var(--shadow); }
+  .done .info .ln { display:flex; align-items:center; gap:11px; padding:13px 0; font-size:1rem; }
+  .done .info .ln + .ln { border-top:1px dashed var(--line); }
+  .done .info .k { color:var(--ink-soft); font-size:.82rem; width:48px; flex:none; }
+  .done .info .v { font-weight:800; color:var(--brown-deep); }
+  .done .foot { color:var(--ink-faint); font-size:.82rem; margin-top:18px; }
+</style>
+</head>
+<body>
+
+<!-- 填單前提醒（一進頁面就跳，按了才開始填） -->
+<div class="pre-modal" id="preModal">
+  <div class="box">
+    <div class="ic">📅</div>
+    <h3>填單前小提醒</h3>
+    <p>請先與美容師在 LINE 上<strong>確定好預約日期與時段</strong>，<br>再進行填單！</p>
+    <button id="preModalOk">我知道了，開始預約</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <!-- LIFF 啟動失敗時顯示 -->
+  <div class="liff-err" id="liffErr" style="display:none;">
+    <div class="ic">📱</div>
+    <h3>請從 LINE 選單開啟本頁</h3>
+    <p>這個預約頁需要透過 LINE 開啟才能使用，請從「洗毛這件小事」的圖文選單點選「線上預約」。</p>
+  </div>
+
+  <div id="form" style="display:none;">
+    <div class="head anim">
+      <span class="eyebrow">🐾 線上預約</span>
+      <h1>預約毛孩美容時間</h1>
+      <p class="sub">洗毛這件小事 · 送出後直接寫進店家的日曆</p>
+    </div>
+
+    <div class="card anim d1">
+      <h2><span class="step">1</span>選擇服務</h2>
+      <div class="svc" id="svc">
+        <div class="opt on" data-svc="wash"><div class="chk">✓</div><div class="ic">🛁</div><div class="nm">洗澡</div></div>
+        <div class="opt" data-svc="cut"><div class="chk">✓</div><div class="ic">✂️</div><div class="nm">剪毛</div></div>
+      </div>
+    </div>
+
+    <div class="card anim d2">
+      <h2><span class="step">2</span>預約資料</h2>
+      <label>寵物名 *</label><input type="text" id="petName" placeholder="例：黑寶">
+      <label>聯絡電話 *</label><input type="tel" id="phone" placeholder="09xxxxxxxx">
+      <label>日期 *</label><input type="date" id="date">
+      <label>時段 *</label>
+      <div class="slots" id="slots"></div>
+      <div class="daynote" id="dayNote"></div>
+      <label>備註（選填）</label><input type="text" id="note" placeholder="例：怕剪指甲、要剃毛">
+    </div>
+
+    <button class="submit anim d3" id="submit" disabled>
+      <span class="t">確認預約</span><span class="arr">→</span>
+    </button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="result" style="display:none;">
+    <div class="done">
+      <div class="check">✓</div>
+      <h2>預約成功！</h2>
+      <p class="lead">已寫進店家的 Google 日曆</p>
+      <div class="info" id="info"></div>
+      <p class="foot">到時我們會提醒您，期待見到毛孩 🐾</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+// ⚠️ 部署後填：① LINE Developers 為這頁建的 LIFF ID ② 寵美預約日曆 GAS Web App 的 /exec 網址
+const LIFF_ID = "2009881783-KNPnd7zm";
+const API_URL = "https://script.google.com/macros/s/AKfycbwwph9sIievKaR2sOyuOiW7rs7jlLcWjusrFharQToF1AFhBlUNqVrjF36Aa4X8VIer/exec";
+
+const $ = (id) => document.getElementById(id);
+const pad = (n) => String(n).padStart(2, "0");
+const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+let svc = "wash";
+let selectedTime = "";
+let liffUserId = "", liffDisplayName = "";
+
+// 填單前提醒：按「我知道了」才關閉
+$("preModalOk").addEventListener("click", () => { $("preModal").style.display = "none"; });
+
+// ---- 啟動：LIFF 登入 → 取得使用者身分 → 顯示表單 ----
+(async function init() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    const prof = await liff.getProfile();
+    liffUserId = prof.userId;
+    liffDisplayName = prof.displayName || "";
+  } catch (e) {
+    console.warn("liff init fail", e);
+    $("preModal").style.display = "none";
+    $("liffErr").style.display = "block";
+    return;
+  }
+  $("form").style.display = "block";
+  initDate();
+  refreshDay();
+})();
+
+// 服務選擇
+document.querySelectorAll("#svc .opt").forEach(el => el.addEventListener("click", () => {
+  svc = el.dataset.svc;
+  document.querySelectorAll("#svc .opt").forEach(o => o.classList.toggle("on", o.dataset.svc === svc));
+}));
+
+// 日期：預設明天、最小今天
+function initDate() {
+  const today = new Date();
+  const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+  $("date").min = fmtDate(today);
+  $("date").value = fmtDate(tmr);
+}
+$("date").addEventListener("change", refreshDay);
+
+function setNote(text, cls) {
+  const n = $("dayNote");
+  if (!text) { n.style.display = "none"; return; }
+  n.textContent = text;
+  n.className = "daynote " + cls;
+  n.style.display = "block";
+}
+
+const slotsEl = $("slots");
+function showSkeleton() {
+  slotsEl.innerHTML = "";
+  for (let i = 0; i < 6; i++) {
+    const d = document.createElement("div");
+    d.className = "slot sk"; d.textContent = "00:00";
+    slotsEl.appendChild(d);
+  }
+}
+
+// 問後端：這天公休嗎？哪些時段被約走？→ 重建時段網格
+async function refreshDay() {
+  const date = $("date").value, btn = $("submit");
+  setNote("", "");
+  selectedTime = ""; btn.disabled = true;
+  showSkeleton();
+  if (!date) { slotsEl.innerHTML = ""; setNote("請先選日期", "err"); return; }
+
+  let out;
+  try {
+    const res = await fetch(API_URL + "?day=" + encodeURIComponent(date));
+    out = await res.json();
+  } catch (err) {
+    slotsEl.innerHTML = ""; setNote("讀取可預約時段失敗，請稍後再試", "err"); return;
+  }
+
+  slotsEl.innerHTML = "";
+  if (!out || !out.ok) { setNote((out && out.message) || "讀取失敗", "err"); return; }
+  if (out.closed) { setNote("🚫 " + (out.closedReason || "本日不開放預約"), "err"); return; }
+
+  const taken = new Set(out.takenTimes || []);
+  const isToday = date === fmtDate(new Date());
+  const now = Date.now();
+  let count = 0;
+  const frag = document.createDocumentFragment();
+  // 開放 10:00～16:00、每次 1 小時 → 整點 6 格（最後一格 15:00–16:00）
+  for (let h = 10; h < 16; h++) {
+    const v = pad(h) + ":00";
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "slot"; b.textContent = v;
+    let disabled = taken.has(v);                                   // 已被約走（目前後端同時段可重複、恆為空）
+    if (!disabled && isToday) {                                    // 今天：跳過已過去的時段
+      const slot = new Date(); slot.setHours(h, 0, 0, 0);
+      if (slot.getTime() <= now) disabled = true;
+    }
+    if (disabled) {
+      b.disabled = true;
+    } else {
+      count++;
+      b.addEventListener("click", () => {
+        selectedTime = v;
+        slotsEl.querySelectorAll(".slot").forEach(s => s.classList.toggle("on", s === b));
+        btn.disabled = false;
+      });
+    }
+    frag.appendChild(b);
+  }
+  slotsEl.appendChild(frag);
+  if (count === 0) { setNote("😢 這天已約滿，請換一天", "err"); return; }
+
+  // 預設選 14:00（無則選第一個可約時段）
+  const slots = [...slotsEl.querySelectorAll(".slot")].filter(s => !s.disabled);
+  const def = slots.find(s => s.textContent === "14:00") || slots[0];
+  if (def) def.click();
+  if (taken.size > 0) setNote("部分時段已被預約（已淡化），請選還能約的時段", "ok");
+}
+
+// 送出
+$("submit").addEventListener("click", async () => {
+  const msg = $("msg"); msg.className = "msg"; msg.style.display = "none";
+  const fail = (t) => { msg.textContent = t; msg.className = "msg err"; };
+
+  const petName = $("petName").value.trim();
+  const phone = $("phone").value.trim();
+  if (!petName) return fail("請填寵物名");
+  if (!/^09\d{8}$/.test(phone.replace(/\D/g, ""))) return fail("電話格式錯誤（09 開頭 10 碼）");
+  if (!$("date").value) return fail("請選日期");
+  if (!selectedTime) return fail("請選時段");
+  if (!liffUserId) return fail("身分驗證失敗，請從 LINE 選單重新開啟本頁");
+
+  const btn = $("submit"), btnT = btn.querySelector(".t");
+  btn.disabled = true; btnT.textContent = "預約中…";
+  const data = {
+    petName, phone, service: svc,
+    date: $("date").value, time: selectedTime,
+    note: $("note").value.trim(),
+    userId: liffUserId, displayName: liffDisplayName,
+  };
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
+    const out = await res.json();
+    if (out.ok) {
+      $("info").innerHTML =
+        `<div class="ln"><span class="k">毛孩</span><span class="v">${out.petName}</span></div>
+         <div class="ln"><span class="k">服務</span><span class="v">${out.service}</span></div>
+         <div class="ln"><span class="k">時間</span><span class="v">${out.whenLabel}</span></div>`;
+      $("form").style.display = "none";
+      $("result").style.display = "block";
+      window.scrollTo(0, 0);
+    } else {
+      fail("預約失敗：" + (out.message || "未知錯誤"));
+      btnT.textContent = "確認預約";
+      refreshDay();   // 可能是時段剛被約走 → 刷新可選時段
+    }
+  } catch (err) {
+    fail("連線失敗，請稍後再試");
+    btn.disabled = false; btnT.textContent = "確認預約";
+  }
+});
+</script>
+</body>
+</html>

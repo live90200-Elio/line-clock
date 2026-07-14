@@ -292,6 +292,9 @@ $("submit").addEventListener("click", async () => {
   if (!petName) return fail("請填寵物名");
   if (!$("agree").checked) return fail("請勾選「已詳閱並同意」");
   if (!hasSig) return fail("請簽名");
+  // 後端把 liffUserId 列必填：LINE 身分沒抓到就在這裡擋下（含電腦測試環境），
+  // 不要讓客戶送出後才被退回看不懂的錯誤（2026-07-14 客戶填三次都失敗案例）
+  if (!liffUserId) return fail("無法取得您的 LINE 身分，請關閉此頁後，從 LINE 重新點開連結再填一次");
 
   const btn = $("submit"); btn.disabled = true; btn.textContent = "送出中…";
   const data = {
@@ -320,9 +323,23 @@ $("submit").addEventListener("click", async () => {
       else { $("doneNoMail").style.display = "block"; }
       show("done"); window.scrollTo(0, 0);
     }
-    else { fail("送出失敗：" + (out.message || out.error || "未知錯誤")); btn.disabled = false; btn.textContent = "確認簽署並送出"; }
-  } catch (err) { fail("連線失敗，請稍後再試"); btn.disabled = false; btn.textContent = "確認簽署並送出"; }
+    else { fail("送出失敗：" + friendlyError(out)); btn.disabled = false; btn.textContent = "確認簽署並送出"; }
+  } catch (err) { fail("網路連線不穩，資料沒有送出，請確認訊號後再按一次送出"); btn.disabled = false; btn.textContent = "確認簽署並送出"; }
 });
+
+// 把後端錯誤碼翻成客戶看得懂的中文（缺少必填：liffUserId 這類訊息客戶看不懂）
+function friendlyError(out) {
+  const map = {
+    missing_liffUserId: "無法取得您的 LINE 身分，請關閉此頁後，從 LINE 重新點開連結再填一次",
+    missing_name: "請填飼主姓名",
+    missing_phone: "請填電話",
+    missing_petName: "請填寵物名",
+    missing_signaturePng: "請簽名",
+    invalid_phone: "電話格式錯誤（09 開頭 10 碼）",
+    no_body: "系統沒有收到資料，請再按一次送出",
+  };
+  return map[out.error] || out.message || out.error || "未知錯誤";
+}
 </script>
 </body>
 </html>

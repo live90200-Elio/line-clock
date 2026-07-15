@@ -295,6 +295,9 @@ $("submit").addEventListener("click", async () => {
   // 後端把 liffUserId 列必填：LINE 身分沒抓到就在這裡擋下（含電腦測試環境），
   // 不要讓客戶送出後才被退回看不懂的錯誤（2026-07-14 客戶填三次都失敗案例）
   if (!liffUserId) return fail("無法取得您的 LINE 身分，請關閉此頁後，從 LINE 重新點開連結再填一次");
+  let liffAccessToken = "";
+  try { liffAccessToken = liff.getAccessToken() || ""; } catch (e) {}
+  if (!liffAccessToken) return fail("無法取得您的 LINE 身分，請關閉此頁後，從 LINE 重新點開連結再填一次");
 
   const btn = $("submit"); btn.disabled = true; btn.textContent = "送出中…";
   const data = {
@@ -311,7 +314,7 @@ $("submit").addEventListener("click", async () => {
     vetDesignatedBy: getRadio("vetBy"), vetName: $("vetName").value.trim(), vetTel: $("vetTel").value.trim(), vetAddr: $("vetAddr").value.trim(),
     signaturePng: canvas.toDataURL("image/png"),
     agreedAt: new Date().toISOString(), submittedAt: new Date().toISOString(),
-    liffUserId, liffDisplayName, userAgent: navigator.userAgent,
+    liffUserId, liffAccessToken, liffDisplayName, userAgent: navigator.userAgent,
     contractType: "official",
   };
   try {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>線上預約 · 洗毛這件小事</title>
+<title>預約申請 · 洗毛這件小事</title>
 <style>
   :root {
     --brown:#8a5a2b; --brown-deep:#6e4620; --brown-soft:#b08a5d;
@@ -153,9 +153,9 @@
 <div class="pre-modal" id="preModal">
   <div class="box">
     <div class="ic">📅</div>
-    <h3>填單前小提醒</h3>
-    <p>請先與美容師在 LINE 上<strong>確定好預約日期與時段</strong>，<br>再進行填單！</p>
-    <button id="preModalOk">我知道了，開始預約</button>
+    <h3>送出不等於預約成立</h3>
+    <p>請先與美容師在 LINE 上談好日期與時段。送出後仍是<strong>待確認申請</strong>；收到店家明確回覆後才算預約成立。</p>
+    <button id="preModalOk">我知道了，開始填寫</button>
   </div>
 </div>
 
@@ -164,14 +164,14 @@
   <div class="liff-err" id="liffErr" style="display:none;">
     <div class="ic">📱</div>
     <h3>請從 LINE 選單開啟本頁</h3>
-    <p>這個預約頁需要透過 LINE 開啟才能使用，請從「洗毛這件小事」的圖文選單點選「線上預約」。</p>
+    <p>這個預約申請頁需要透過 LINE 開啟才能使用，請從「洗毛這件小事」的圖文選單點選「寵美預約」。</p>
   </div>
 
   <div id="form" style="display:none;">
     <div class="head anim">
-      <span class="eyebrow">🐾 線上預約</span>
-      <h1>預約毛孩美容時間</h1>
-      <p class="sub">洗毛這件小事 · 送出後直接寫進店家的日曆</p>
+      <span class="eyebrow">🐾 預約申請</span>
+      <h1>申請毛孩美容時間</h1>
+      <p class="sub">洗毛這件小事 · 店家確認後才算預約成立</p>
     </div>
 
     <div class="card anim d1">
@@ -183,7 +183,7 @@
     </div>
 
     <div class="card anim d2">
-      <h2><span class="step">2</span>預約資料</h2>
+      <h2><span class="step">2</span>申請資料</h2>
       <label>寵物名 *</label><input type="text" id="petName" placeholder="例：黑寶">
       <label>聯絡電話 *</label><input type="tel" id="phone" placeholder="09xxxxxxxx">
       <label>日期 *</label><input type="date" id="date">
@@ -194,7 +194,7 @@
     </div>
 
     <button class="submit anim d3" id="submit" disabled>
-      <span class="t">確認預約</span><span class="arr">→</span>
+      <span class="t">送出預約申請</span><span class="arr">→</span>
     </button>
     <div class="msg" id="msg"></div>
   </div>
@@ -202,10 +202,10 @@
   <div id="result" style="display:none;">
     <div class="done">
       <div class="check">✓</div>
-      <h2>預約成功！</h2>
-      <p class="lead">已寫進店家的 Google 日曆</p>
+      <h2>申請已送出</h2>
+      <p class="lead">目前尚未成立，收到店家 LINE 明確回覆後才算預約成功。</p>
       <div class="info" id="info"></div>
-      <p class="foot">到時我們會提醒您，期待見到毛孩 🐾</p>
+      <p class="foot">未收到確認前請勿直接到店；我們會盡快回覆您 🐾</p>
     </div>
   </div>
 </div>
@@ -349,7 +349,7 @@ $("submit").addEventListener("click", async () => {
   if (!liffUserId) return fail("身分驗證失敗，請從 LINE 選單重新開啟本頁");
 
   const btn = $("submit"), btnT = btn.querySelector(".t");
-  btn.disabled = true; btnT.textContent = "預約中…";
+  btn.disabled = true; btnT.textContent = "送出申請中…";
   const data = {
     petName, phone, service: svc,
     date: $("date").value, time: selectedTime,
@@ -368,13 +368,13 @@ $("submit").addEventListener("click", async () => {
       $("result").style.display = "block";
       window.scrollTo(0, 0);
     } else {
-      fail("預約失敗：" + (out.message || "未知錯誤"));
-      btnT.textContent = "確認預約";
+      fail("申請失敗：" + (out.message || "未知錯誤"));
+      btnT.textContent = "送出預約申請";
       refreshDay();   // 可能是時段剛被約走 → 刷新可選時段
     }
   } catch (err) {
     fail("連線失敗，請稍後再試");
-    btn.disabled = false; btnT.textContent = "確認預約";
+    btn.disabled = false; btnT.textContent = "送出預約申請";
   }
 });
 </script>

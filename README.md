@@ -16,7 +16,9 @@ GAS URL 直接寫在各 HTML 的 `<script>` 開頭常數區。GAS 重新部署�
 
 - 純靜態頁、無建置流程，CSS/JS 全部內嵌。
 - POST 一律用 `text/plain` body 裝 JSON 字串，避免 CORS preflight（GAS 端自行 `JSON.parse(e.postData.contents)`）。
-- `customer.html` 的美容師清單（`OPERATORS`）與服務項目（`SERVICES`）是頁內常數陣列，改名字/加項目直接改陣列即可。
+- `customer.html` 的服務項目（`SERVICES`）是頁內常數陣列，加項目直接改陣列即可。
+- `customer.html` 的美容師清單**已不在前端維護**：2026-08-06 起由後端回傳（`payload.operators` ← 檔案 A「員工白名單」分頁）。
+  員工來去只改那張試算表即可，不用動這個檔、不用重推 Pages。頁內的 `OPERATORS_FALLBACK` 只在後端沒回這個欄位時當備援。
 
 ## ⚠️ 後端（GAS）待辦
 
